@@ -977,6 +977,20 @@ function openDocUpload(projectId, docType) {
   liff.openWindow({ url, external: true });
 }
 
+// Maps project status to the doc_type that should be uploaded next.
+// Returns null for statuses where ad-hoc upload is not applicable.
+function getDocTypeForStatus(status) {
+  const map = {
+    present:     "quotation_support",
+    demo:        "quotation_support",
+    site_survey: "site_survey",
+    quotation:   "tor_support",   // special: 2 options handled in openUploadOverlay
+    tor:         "contract",
+    contract:    "closing",
+  };
+  return map[status] || null;
+}
+
 async function submitPresent(projectId) {
   const date = document.getElementById("ap-present-date")?.value;
   const type = document.getElementById("ap-present-type")?.value;
@@ -1076,32 +1090,38 @@ async function doChangeStatus(projectID, status, statusNote, rejectReason, appoi
   } catch { toast("เปลี่ยนสถานะไม่สำเร็จ"); }
 }
 
-/* ─── Overlay: ad-hoc document upload (generic fallback) ─── */
+/* ─── Overlay: document upload — auto-determines doc_type from project status ─── */
 function openUploadOverlay(projectID) {
-  _pendingProjectID = projectID;
-  _pendingStatus    = "__upload__";
+  const status  = currentProject?.status || "";
+  const docType = getDocTypeForStatus(status);
 
-  document.getElementById("ov-title").textContent = "แนบเอกสาร";
-  document.getElementById("ov-sub").textContent   = "เลือกประเภทแล้วอัปโหลดในเบราว์เซอร์ภายนอก";
-  document.getElementById("ov-body").innerHTML    = `
-    <div class="ov-section">
-      <div class="ov-label">ประเภทเอกสาร *</div>
-      <select class="ov-input" id="ov-doctype">
-        <option value="">-- เลือกประเภท --</option>
-        <option value="quotation_support">ใบเสนอราคา (Support)</option>
-        <option value="tor_support">ร่าง TOR (Support)</option>
-        <option value="tor_dealer">ร่าง TOR (Dealer)</option>
-        <option value="contract">เอกสารสัญญา</option>
-        <option value="closing">เอกสารปิดงาน</option>
-        <option value="site_survey">เอกสาร Site Survey</option>
-      </select>
-    </div>
-    <div style="background:#fff8e1;border-radius:10px;padding:12px 14px;font-size:13px;color:#7a5f00;line-height:1.6">
-      💡 จะเปิดเบราว์เซอร์ภายนอกเพื่ออัปโหลดไฟล์<br>
-      หลังอัปโหลดเสร็จ กลับมาที่แอปนี้ได้เลย
-    </div>`;
-  document.getElementById("ov-confirm").textContent = "เปิดหน้าอัปโหลด";
-  document.getElementById("overlay").classList.add("on");
+  if (!docType) {
+    toast("ไม่สามารถแนบเอกสารในสถานะนี้ได้");
+    return;
+  }
+
+  if (status === "quotation") {
+    // Quotation needs two TOR options — show a choice overlay
+    const iid = esc(projectID);
+    document.getElementById("ov-title").textContent = "แนบร่าง TOR";
+    document.getElementById("ov-sub").textContent   = "เลือกประเภทไฟล์ TOR";
+    document.getElementById("ov-body").innerHTML    = `
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <button class="ov-btn ov-btn-primary"
+          onclick="closeOverlay();openDocUpload('${iid}','tor_support')">
+          📎 แนบ TOR จาก Support (หลัก)
+        </button>
+        <button class="ov-btn ov-btn-cancel"
+          onclick="closeOverlay();openDocUpload('${iid}','tor_dealer')">
+          📎 แนบ TOR จาก Dealer (ไม่บังคับ)
+        </button>
+      </div>`;
+    document.getElementById("ov-confirm").style.display = "none";
+    document.getElementById("overlay").classList.add("on");
+  } else {
+    // All other statuses: go directly to upload page
+    openDocUpload(projectID, docType);
+  }
 }
 
 /* ─── Overlay: reject reason ─── */
@@ -1127,17 +1147,13 @@ async function confirmOverlay() {
     return;
   }
 
-  // Ad-hoc upload: open external browser
-  if (_pendingStatus === "__upload__") {
-    const docType = document.getElementById("ov-doctype")?.value || "";
-    if (!docType) { toast("กรุณาเลือกประเภทเอกสาร"); return; }
-    closeOverlay();
-    openDocUpload(_pendingProjectID, docType);
-    return;
-  }
 }
 
-function closeOverlay() { document.getElementById("overlay").classList.remove("on"); }
+function closeOverlay() {
+  document.getElementById("overlay").classList.remove("on");
+  const c = document.getElementById("ov-confirm");
+  if (c) c.style.display = "";
+}
 function ovClickOutside(e) { if (e.target === document.getElementById("overlay")) closeOverlay(); }
 
 /* ─── Navigation ─── */

@@ -68,16 +68,11 @@
 
 <div id="main">
   <div class="card">
-    <div class="lbl">ประเภทเอกสาร *</div>
-    <select id="doc-type">
-      <option value="">-- เลือกประเภท --</option>
-      <option value="quotation_support">ใบเสนอราคา (Support)</option>
-      <option value="tor_support">ร่าง TOR (Support)</option>
-      <option value="tor_dealer">ร่าง TOR (Dealer)</option>
-      <option value="contract">เอกสารสัญญา</option>
-      <option value="closing">เอกสารปิดงาน</option>
-      <option value="site_survey">เอกสาร Site Survey</option>
-    </select>
+    <div class="lbl">ประเภทเอกสาร</div>
+    <div id="doc-type-display"
+         style="padding:14px;background:#f5f5f5;border-radius:8px;font-size:15px;color:#333;font-weight:700">
+      กำลังโหลด...
+    </div>
   </div>
 
   <div class="card">
@@ -119,20 +114,29 @@ const DOC_TYPE_MAP = {
   'tor':          'tor_support',
 };
 
-// Pre-select doc_type when passed from LIFF (supports both English values and Thai labels)
-const rawDocType    = params.get("doc_type") || "";
-const mappedDocType = DOC_TYPE_MAP[rawDocType] || rawDocType;
-if (mappedDocType) {
-  const sel = document.getElementById("doc-type");
-  for (const opt of sel.options) {
-    if (opt.value === mappedDocType) { opt.selected = true; break; }
-  }
-}
+const DOC_TYPE_LABELS = {
+  'quotation_support': 'ใบเสนอราคา (Support)',
+  'tor_support':       'ร่าง TOR (Support)',
+  'tor_dealer':        'ร่าง TOR (Dealer)',
+  'contract':          'เอกสารสัญญา',
+  'closing':           'เอกสารปิดงาน',
+  'site_survey':       'เอกสาร Site Survey',
+};
 
-// Surface a clear error if launched without required params
+// Resolve doc_type from URL param (supports both English values and Thai legacy labels)
+const rawDocType = params.get("doc_type") || "";
+const docType    = DOC_TYPE_MAP[rawDocType] || rawDocType;
+const docLabel   = DOC_TYPE_LABELS[docType] || '';
+
+// Validate required params and show appropriate errors
 if (!PROJECT_ID || !TOKEN) {
   document.getElementById("main").innerHTML =
     `<div class="err-banner">⚠️ ลิงก์ไม่ถูกต้อง<br>กรุณากลับไปที่แอป Vizzel Sales แล้วลองใหม่</div>`;
+} else if (!docLabel) {
+  document.getElementById("main").innerHTML =
+    `<div class="err-banner">⚠️ ไม่พบประเภทเอกสาร<br>กรุณากลับไปที่แอปและลองใหม่</div>`;
+} else {
+  document.getElementById("doc-type-display").textContent = '📄 ' + docLabel;
 }
 
 let selectedFile = null;
@@ -160,8 +164,7 @@ function onFileChosen(input) {
 }
 
 async function doUpload() {
-  const docType = document.getElementById("doc-type").value;
-  if (!docType)      { showMsg("กรุณาเลือกประเภทเอกสาร", false); return; }
+  if (!docType)      { showMsg("ไม่พบประเภทเอกสาร กรุณากลับไปที่แอปและลองใหม่", false); return; }
   if (!selectedFile) { showMsg("กรุณาเลือกไฟล์", false); return; }
 
   const btn = document.getElementById("submit-btn");
@@ -170,7 +173,7 @@ async function doUpload() {
 
   const fd = new FormData();
   fd.append("project_id", PROJECT_ID);
-  fd.append("doc_type",   DOC_TYPE_MAP[docType] || docType);
+  fd.append("doc_type",   docType);
   fd.append("file",       selectedFile);
 
   try {
