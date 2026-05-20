@@ -1496,7 +1496,9 @@ function hideProfileOverlay() {
 function logout() {
   localStorage.clear();
   sessionStorage.clear();
-  window.location.href = "https://liff.line.me/" + LIFF_ID;
+  try { liff.logout(); } catch(e) {}
+  // Redirect to app root — LIFF will trigger LINE login screen on next init
+  window.location.replace("https://vizzelintel.github.io/vizzel-sales-frontend/");
 }
 
 /* ─── Profile: ข้อมูลส่วนตัว ─── */
