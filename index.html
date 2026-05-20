@@ -328,22 +328,18 @@ const NEXT = {
 
 /* Sequential doc requirements per status (mirrors backend statusDocRequirements) */
 const DOC_REQUIREMENTS = {
-  tor:      ["QUOTE"],
-  contract: ["QUOTE","TOR"],
-  closing:  ["QUOTE","TOR","CONTRACT"],
-  closed:   ["QUOTE","TOR","CONTRACT","CLOSING"],
+  contract: ["quotation"],
+  closing:  ["quotation","contract"],
+  closed:   ["quotation","contract","closing"],
 };
 
 const DOC_NAMES = {
-  QUOTE:    "ใบเสนอราคา",
-  TOR:      "ร่าง TOR",
-  CONTRACT: "สัญญาจัดซื้อจัดจ้าง",
-  CLOSING:  "เอกสารปิดงาน",
-  DELIVERY: "ใบส่งมอบสินทรัพย์",
-  OTHER:    "เอกสารอื่นๆ",
+  quotation: "ใบเสนอราคา",
+  contract:  "เอกสารสัญญา",
+  closing:   "เอกสารปิดงาน",
 };
 
-const DOC_TYPES_SEQ = ["QUOTE","TOR","CONTRACT","CLOSING","DELIVERY"];
+const DOC_TYPES_SEQ = ["quotation","contract","closing"];
 
 /* Statuses that trigger a Google Calendar appointment */
 const APPT_STATUSES = new Set(["present","demo","site_survey"]);
@@ -555,10 +551,7 @@ function renderDocsSection(docs, projectID) {
     </div>${arrow}`;
   }).join("");
 
-  // Doc rows (sequential first, OTHER at end)
-  const seqDocs   = docs.filter(d => d.doc_type !== "OTHER");
-  const otherDocs = docs.filter(d => d.doc_type === "OTHER");
-  const allDocs   = [...seqDocs, ...otherDocs];
+  const allDocs = [...docs];
 
   const docRows = allDocs.length
     ? allDocs.map(d => `
@@ -710,12 +703,9 @@ function openUploadOverlay(projectID) {
       <div class="ov-label">ประเภทเอกสาร *</div>
       <select class="ov-input" id="ov-doctype">
         <option value="">-- เลือกประเภท --</option>
-        <option value="QUOTE">ใบเสนอราคา</option>
-        <option value="TOR">ร่าง TOR</option>
-        <option value="CONTRACT">สัญญาจัดซื้อจัดจ้าง</option>
-        <option value="CLOSING">เอกสารปิดงาน</option>
-        <option value="DELIVERY">ใบส่งมอบสินทรัพย์</option>
-        <option value="OTHER">เอกสารอื่นๆ</option>
+        <option value="quotation">ใบเสนอราคา</option>
+        <option value="contract">เอกสารสัญญา</option>
+        <option value="closing">เอกสารปิดงาน</option>
       </select>
     </div>
     <div style="background:#fff8e1;border-radius:10px;padding:12px 14px;font-size:13px;color:#7a5f00;line-height:1.6">
