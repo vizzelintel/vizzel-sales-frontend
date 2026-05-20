@@ -161,7 +161,7 @@ async function doUpload() {
 
   const fd = new FormData();
   fd.append("project_id", PROJECT_ID);
-  fd.append("doc_type",   docType);
+  fd.append("doc_type",   DOC_TYPE_MAP[docType] || docType);
   fd.append("file",       selectedFile);
 
   try {
