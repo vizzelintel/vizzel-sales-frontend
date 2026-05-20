@@ -348,11 +348,12 @@ const DOC_REQUIREMENTS = {
 
 const DOC_NAMES = {
   quotation: "ใบเสนอราคา",
+  tor:       "ร่าง TOR",
   contract:  "เอกสารสัญญา",
   closing:   "เอกสารปิดงาน",
 };
 
-const DOC_TYPES_SEQ = ["quotation","contract","closing"];
+const DOC_TYPES_SEQ = ["quotation","tor","contract","closing"];
 
 /* Statuses that trigger a Google Calendar appointment */
 const APPT_STATUSES = new Set(["present","demo","site_survey"]);
@@ -741,6 +742,7 @@ function openUploadOverlay(projectID) {
       <select class="ov-input" id="ov-doctype">
         <option value="">-- เลือกประเภท --</option>
         <option value="quotation">ใบเสนอราคา</option>
+        <option value="tor">ร่าง TOR</option>
         <option value="contract">เอกสารสัญญา</option>
         <option value="closing">เอกสารปิดงาน</option>
       </select>

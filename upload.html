@@ -72,6 +72,7 @@
     <select id="doc-type">
       <option value="">-- เลือกประเภท --</option>
       <option value="quotation">ใบเสนอราคา</option>
+      <option value="tor">ร่าง TOR</option>
       <option value="contract">เอกสารสัญญา</option>
       <option value="closing">เอกสารปิดงาน</option>
     </select>
@@ -102,6 +103,8 @@ const API_BASE   = "https://vizzel-sales-api.fly.dev";
 const DOC_TYPE_MAP = {
   'ใบเสนอราคา':                          'quotation',
   'ส่งใบเสนอราคา':                        'quotation',
+  'ร่าง TOR':                            'tor',
+  'ส่งร่าง TOR':                          'tor',
   'สัญญา':                               'contract',
   'เอกสารสัญญา':                          'contract',
   'แนบเอกสารสัญญาจัดซื้อจัดจ้าง':        'contract',
