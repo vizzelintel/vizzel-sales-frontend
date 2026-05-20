@@ -190,7 +190,6 @@
   <div class="tabs">
     <button class="tab on" data-tab="pipeline" onclick="showTab('pipeline')">📊 Pipeline</button>
     <button class="tab"    data-tab="projects" onclick="showTab('projects')">📋 โครงการ</button>
-    <button class="tab"    data-tab="create"   onclick="showTab('create')">➕ สร้าง</button>
   </div>
 
   <div class="content">
@@ -206,58 +205,16 @@
 
     <!-- Projects list -->
     <div class="screen" id="screen-projects">
-      <div class="plist" id="projList"></div>
-    </div>
-
-    <!-- Create form -->
-    <div class="screen" id="screen-create">
-      <div class="sec" style="margin-bottom:10px">ข้อมูลโครงการใหม่</div>
-      <div class="fcard">
-        <div class="frow">
-          <label class="flbl">หน่วยงาน *</label>
-          <input class="finp" id="f-agency" placeholder="ชื่อหน่วยงาน / องค์กร">
-        </div>
-        <div class="frow">
-          <label class="flbl">ประเภท</label>
-          <select class="finp" id="f-atype">
-            <option value="">-- เลือกประเภท --</option>
-            <option>กระทรวง</option>
-            <option>กรม</option>
-            <option>องค์การบริหารส่วนจังหวัด</option>
-            <option>องค์การบริหารส่วนตำบล</option>
-            <option>เทศบาลนคร</option>
-            <option>เทศบาลเมือง</option>
-            <option>เทศบาลตำบล</option>
-            <option>รัฐวิสาหกิจ</option>
-            <option>โรงเรียน</option>
-            <option>วิทยาลัย</option>
-            <option>มหาวิทยาลัย</option>
-            <option>โรงพยาบาลศูนย์</option>
-            <option>โรงพยาบาลทั่วไป</option>
-            <option>โรงพยาบาลชุมชน</option>
-            <option>โรงพยาบาลเอกชน</option>
-            <option>บริษัทเอกชน</option>
-          </select>
-        </div>
-        <div class="frow">
-          <label class="flbl">จังหวัด</label>
-          <input class="finp" id="f-region" placeholder="พิมพ์ชื่อจังหวัด..." autocomplete="new-password"
-                 onfocus="showProvinces()" onclick="showProvinces()" oninput="filterProvinces()">
-        </div>
-        <div class="frow">
-          <label class="flbl">ผู้ติดต่อ</label>
-          <input class="finp" id="f-contact" placeholder="ชื่อผู้ติดต่อ">
-        </div>
-        <div class="frow">
-          <label class="flbl">ตำแหน่ง</label>
-          <input class="finp" id="f-pos" placeholder="ตำแหน่ง / แผนก">
-        </div>
-        <div class="frow">
-          <label class="flbl">โทรศัพท์ *</label>
-          <input class="finp" id="f-phone" type="tel" placeholder="เบอร์โทรศัพท์">
-        </div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px">
+        <input type="text" id="searchInput" placeholder="ค้นหาหน่วยงาน..."
+          style="flex:1;padding:10px 14px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;outline:none;"
+          oninput="onSearchInput()">
+        <button onclick="openCreateModal()"
+          style="background:#06C755;color:white;border:none;padding:10px 16px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit">
+          + สร้าง
+        </button>
       </div>
-      <button class="btn btn-green" onclick="submitCreate()">สร้างโครงการ</button>
+      <div class="plist" id="projList"></div>
     </div>
 
     <!-- Detail -->
@@ -284,6 +241,64 @@
 
 <div id="province-drop"></div>
 <div class="toast" id="toast"></div>
+
+<!-- ── Create project modal ── -->
+<div id="createModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:16px;padding:24px;width:90%;max-width:480px;max-height:90vh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <h2 style="margin:0;font-size:18px;font-weight:700">สร้างโครงการใหม่</h2>
+      <button onclick="closeCreateModal()" style="background:none;border:none;font-size:24px;cursor:pointer;line-height:1;color:#636366">×</button>
+    </div>
+    <form id="createProjectForm">
+      <div style="margin-bottom:14px">
+        <label style="font-size:13px;color:#636366;font-weight:600">ชื่อหน่วยงาน *</label>
+        <input type="text" id="newAgencyName" required
+          placeholder="กรอกชื่อเต็ม เช่น องค์การบริหารส่วนตำบลหนองแวง"
+          style="width:100%;padding:10px 12px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;margin-top:6px;outline:none;box-sizing:border-box">
+        <small id="agencyNameError" style="color:#FF3B30;display:none;margin-top:4px;font-size:12px"></small>
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="font-size:13px;color:#636366;font-weight:600">ประเภทหน่วยงาน *</label>
+        <select id="newAgencyType" required
+          style="width:100%;padding:10px 12px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;margin-top:6px;outline:none;box-sizing:border-box;appearance:none">
+          <option value="">-- เลือกประเภท --</option>
+          <option>กระทรวง</option><option>กรม</option>
+          <option>องค์การบริหารส่วนจังหวัด</option><option>องค์การบริหารส่วนตำบล</option>
+          <option>เทศบาลนคร</option><option>เทศบาลเมือง</option><option>เทศบาลตำบล</option>
+          <option>รัฐวิสาหกิจ</option><option>โรงเรียน</option><option>วิทยาลัย</option>
+          <option>มหาวิทยาลัย</option><option>โรงพยาบาลศูนย์</option>
+          <option>โรงพยาบาลทั่วไป</option><option>โรงพยาบาลชุมชน</option>
+          <option>โรงพยาบาลเอกชน</option><option>บริษัทเอกชน</option>
+        </select>
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="font-size:13px;color:#636366;font-weight:600">จังหวัด</label>
+        <input type="text" id="newProvince" placeholder="จังหวัด"
+          style="width:100%;padding:10px 12px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;margin-top:6px;outline:none;box-sizing:border-box">
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="font-size:13px;color:#636366;font-weight:600">ผู้ติดต่อ</label>
+        <input type="text" id="newContactName" placeholder="ชื่อผู้ติดต่อ"
+          style="width:100%;padding:10px 12px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;margin-top:6px;outline:none;box-sizing:border-box">
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="font-size:13px;color:#636366;font-weight:600">ตำแหน่ง</label>
+        <input type="text" id="newContactPosition" placeholder="ตำแหน่ง / แผนก"
+          style="width:100%;padding:10px 12px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;margin-top:6px;outline:none;box-sizing:border-box">
+      </div>
+      <div style="margin-bottom:20px">
+        <label style="font-size:13px;color:#636366;font-weight:600">โทรศัพท์ *</label>
+        <input type="tel" id="newPhone" required placeholder="0812345678"
+          style="width:100%;padding:10px 12px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;margin-top:6px;outline:none;box-sizing:border-box">
+      </div>
+      <div id="createError" style="color:#FF3B30;margin-bottom:12px;display:none;font-size:13px;line-height:1.5"></div>
+      <button type="submit" id="createSubmitBtn"
+        style="width:100%;background:#06C755;color:white;border:none;padding:14px;border-radius:12px;font-size:16px;font-weight:600;cursor:pointer;font-family:inherit">
+        สร้างโครงการ
+      </button>
+    </form>
+  </div>
+</div>
 
 <script>
 const LIFF_ID = "2010133685-tke1EWht";
@@ -436,10 +451,126 @@ function filterGo(status) {
 
 /* ─── Project list ─── */
 function renderProjList(filterStatus) {
+  // Clear search bar when rendering the full unfiltered list
+  const searchEl = document.getElementById("searchInput");
+  if (searchEl && !filterStatus) searchEl.value = "";
   const list = filterStatus ? projects.filter(p => p.status === filterStatus) : projects;
   document.getElementById("projList").innerHTML =
     list.length ? list.map(rowH).join("") : emptyH("📂","ยังไม่มีโครงการ");
 }
+
+/* ─── Search ─── */
+let _searchTimer = null;
+function onSearchInput() {
+  clearTimeout(_searchTimer);
+  _searchTimer = setTimeout(doSearch, 400);
+}
+
+async function doSearch() {
+  const q = document.getElementById("searchInput")?.value.trim() || "";
+  if (!q) { renderProjList(); return; }
+  try {
+    const res = await fetchWithTimeout(
+      `${API}/api/v1/projects?search=${encodeURIComponent(q)}`,
+      { headers: { Authorization: "Bearer " + token } }
+    );
+    if (!res.ok) throw new Error();
+    const results = await res.json();
+    document.getElementById("projList").innerHTML = results.length
+      ? results.map(rowH).join("")
+      : emptyH("🔍", `ไม่พบหน่วยงาน "${q}"`);
+  } catch {
+    toast("ค้นหาไม่สำเร็จ");
+  }
+}
+
+/* ─── Create modal ─── */
+function openCreateModal() {
+  document.getElementById("createModal").style.display = "flex";
+  document.getElementById("createProjectForm").reset();
+  document.getElementById("createError").style.display   = "none";
+  document.getElementById("agencyNameError").style.display = "none";
+}
+
+function closeCreateModal() {
+  document.getElementById("createModal").style.display = "none";
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("createModal").addEventListener("click", function(e) {
+    if (e.target === this) closeCreateModal();
+  });
+
+  document.getElementById("createProjectForm").addEventListener("submit", async function(e) {
+    e.preventDefault();
+
+    const agencyName = document.getElementById("newAgencyName").value;
+    const nameErrEl  = document.getElementById("agencyNameError");
+    const errEl      = document.getElementById("createError");
+    const btn        = document.getElementById("createSubmitBtn");
+
+    // Client-side validation (mirrors backend rules)
+    const trimmed = agencyName.trim();
+    const abbrev  = /อบต\.?|อบจ\.?|ทต\.?|ทน\.?|ทม\.?|\.$|^\.|\.{2,}/;
+    if (!trimmed) {
+      nameErrEl.textContent    = "กรุณากรอกชื่อหน่วยงาน";
+      nameErrEl.style.display  = "block";
+      return;
+    }
+    if (abbrev.test(trimmed)) {
+      nameErrEl.textContent    = "กรุณาใส่ชื่อหน่วยงานแบบเต็ม ไม่ใช้ตัวย่อหรือจุด (.)";
+      nameErrEl.style.display  = "block";
+      return;
+    }
+    nameErrEl.style.display = "none";
+    errEl.style.display     = "none";
+
+    btn.textContent = "กำลังสร้าง...";
+    btn.disabled    = true;
+
+    try {
+      const res = await fetchWithTimeout(API + "/api/v1/projects", {
+        method:  "POST",
+        headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          agency_name:      trimmed,
+          agency_type:      document.getElementById("newAgencyType").value,
+          region:           document.getElementById("newProvince").value.trim(),
+          contact_person:   document.getElementById("newContactName").value.trim(),
+          contact_position: document.getElementById("newContactPosition").value.trim(),
+          contact_phone:    document.getElementById("newPhone").value.trim(),
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        if (data.existing_project_id) {
+          const eid = data.existing_project_id;
+          errEl.innerHTML = `${esc(data.error)} <a href="#" style="color:#007AFF"
+            onclick="closeCreateModal();showDetail('${eid}');return false;">ดูโครงการ ›</a>`;
+        } else {
+          errEl.textContent = data.error || "เกิดข้อผิดพลาด";
+        }
+        errEl.style.display = "block";
+        return;
+      }
+
+      closeCreateModal();
+      projects.unshift(data);
+      renderPipeline();
+      renderProjList();
+      showDetail(data.id);
+
+    } catch {
+      errEl.textContent    = "ไม่สามารถเชื่อมต่อได้ กรุณาลองใหม่";
+      errEl.style.display  = "block";
+    } finally {
+      btn.textContent = "สร้างโครงการ";
+      btn.disabled    = false;
+    }
+  });
+});
 
 function rowH(p) {
   const sub = [p.agency_type, p.region].filter(Boolean).join(" · ");
@@ -452,44 +583,6 @@ function rowH(p) {
     <span class="bdg bg-${g}">${STATUS[p.status]?.short || p.status}</span>
     <span class="chev">›</span>
   </div>`;
-}
-
-/* ─── Create ─── */
-async function submitCreate() {
-  const agency = document.getElementById("f-agency").value.trim();
-  const phone  = document.getElementById("f-phone").value.trim();
-  if (!agency) { toast("กรุณากรอกชื่อหน่วยงาน"); return; }
-  if (!phone)  { toast("กรุณากรอกเบอร์โทรศัพท์"); return; }
-
-  const payload = {
-    agency_name:      agency,
-    agency_type:      document.getElementById("f-atype").value,
-    region:           document.getElementById("f-region").value.trim(),
-    contact_person:   document.getElementById("f-contact").value.trim(),
-    contact_position: document.getElementById("f-pos").value.trim(),
-    contact_phone:    phone,
-  };
-
-  try {
-    const res = await fetchWithTimeout(API + "/api/v1/projects", {
-      method: "POST",
-      headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
-    const created = await res.json();
-    projects.unshift(created);
-    ["f-agency","f-region","f-contact","f-pos","f-phone"].forEach(id => {
-      document.getElementById(id).value = "";
-    });
-    document.getElementById("f-atype").value = "";
-    toast("สร้างโครงการสำเร็จ ✓");
-    renderPipeline();
-    renderProjList();
-    showTab("pipeline");
-  } catch(e) {
-    toast("สร้างไม่สำเร็จ: " + (e.message || "error"));
-  }
 }
 
 /* ─── Detail ─── */
@@ -860,74 +953,6 @@ function fmtSize(bytes) {
   if (bytes < 1048576)     return (bytes / 1024).toFixed(1) + " KB";
   return (bytes / 1048576).toFixed(1) + " MB";
 }
-
-/* ─── Province picker ─── */
-const PROVINCES = [
-  "กระบี่","กรุงเทพมหานคร","กาญจนบุรี","กาฬสินธุ์","กำแพงเพชร",
-  "ขอนแก่น","จันทบุรี","ฉะเชิงเทรา","ชลบุรี","ชัยนาท",
-  "ชัยภูมิ","ชุมพร","เชียงราย","เชียงใหม่","ตรัง",
-  "ตราด","ตาก","นครนายก","นครปฐม","นครพนม",
-  "นครราชสีมา","นครศรีธรรมราช","นครสวรรค์","นนทบุรี","นราธิวาส",
-  "น่าน","บึงกาฬ","บุรีรัมย์","ปทุมธานี","ประจวบคีรีขันธ์",
-  "ปราจีนบุรี","ปัตตานี","พระนครศรีอยุธยา","พะเยา","พังงา",
-  "พัทลุง","พิจิตร","พิษณุโลก","เพชรบุรี","เพชรบูรณ์",
-  "แพร่","ภูเก็ต","มหาสารคาม","มุกดาหาร","แม่ฮ่องสอน",
-  "ยโสธร","ยะลา","ร้อยเอ็ด","ระนอง","ระยอง",
-  "ราชบุรี","ลพบุรี","ลำปาง","ลำพูน","เลย",
-  "ศรีสะเกษ","สกลนคร","สงขลา","สตูล","สมุทรปราการ",
-  "สมุทรสงคราม","สมุทรสาคร","สระแก้ว","สระบุรี","สิงห์บุรี",
-  "สุโขทัย","สุพรรณบุรี","สุราษฎร์ธานี","สุรินทร์","หนองคาย",
-  "หนองบัวลำภู","อ่างทอง","อำนาจเจริญ","อุดรธานี","อุตรดิตถ์",
-  "อุทัยธานี","อุบลราชธานี",
-];
-
-function showProvinces() {
-  filterProvinces();
-}
-
-function filterProvinces() {
-  const inp  = document.getElementById("f-region");
-  const q    = inp.value.trim();
-  const drop = document.getElementById("province-drop");
-
-  const matches = q ? PROVINCES.filter(p => p.includes(q)) : PROVINCES;
-
-  if (!matches.length) {
-    drop.innerHTML = '<div class="pdrop-empty">ไม่พบจังหวัด</div>';
-  } else {
-    const safe = q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    drop.innerHTML = matches.map(p => {
-      const hl = q
-        ? p.replace(new RegExp(safe, "g"), m => `<mark>${m}</mark>`)
-        : p;
-      return `<div class="pdrop-item" data-name="${p}" onclick="selectProvince(this.dataset.name)">${hl}</div>`;
-    }).join("");
-  }
-
-  positionProvinceDrop();
-  drop.classList.add("open");
-}
-
-function positionProvinceDrop() {
-  const inp  = document.getElementById("f-region");
-  const rect = inp.getBoundingClientRect();
-  const drop = document.getElementById("province-drop");
-  drop.style.top   = rect.bottom + "px";
-  drop.style.left  = rect.left   + "px";
-  drop.style.width = rect.width  + "px";
-}
-
-function selectProvince(name) {
-  document.getElementById("f-region").value = name;
-  document.getElementById("province-drop").classList.remove("open");
-}
-
-// Close dropdown when tapping anywhere outside the input or list
-document.addEventListener("click", e => {
-  if (!e.target.closest("#f-region") && !e.target.closest("#province-drop")) {
-    document.getElementById("province-drop").classList.remove("open");
-  }
-});
 
 // When the user returns from the external upload page, refresh the
 // document list so newly uploaded files appear immediately.
