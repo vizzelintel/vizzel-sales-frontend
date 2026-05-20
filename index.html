@@ -340,6 +340,7 @@ let projects = [];
 let curTab   = "pipeline";
 let prevTab  = "pipeline";
 let detailProjectID = "";
+let currentProject  = null;
 
 async function fetchWithTimeout(url, options = {}, timeoutMs = 8000) {
   const controller = new AbortController();
@@ -603,12 +604,14 @@ async function showDetail(id) {
   const p = projects.find(x => x.id === id);
   if (!p) return;
 
+  currentProject = p;
   activateScreen("detail");
   document.querySelectorAll(".tab").forEach(t => t.classList.remove("on"));
 
   // Render project info immediately; docs + status buttons after we know what's uploaded
   document.getElementById("detailContent").innerHTML =
     buildDetailInfo(p) +
+    buildNoteSection(p) +
     `<div class="sec" style="margin-bottom:7px">เอกสาร</div>
      <div id="docsSection"><div class="spin-wrap"><div class="spinner"></div></div></div>
      <div class="sec" style="margin-bottom:7px">เปลี่ยนสถานะ</div>
@@ -651,6 +654,102 @@ function buildDetailInfo(p) {
   return `<div class="dcard" style="margin-bottom:12px">${
     rows.map(([k,v]) => `<div class="drow"><div class="dkey">${k}</div><div class="dval">${v}</div></div>`).join("")
   }</div>`;
+}
+
+function buildNoteSection(p) {
+  const note     = p.detail_note || "";
+  const isClosed = p.status === "closed";
+  const viewText = note
+    ? `<span style="white-space:pre-wrap">${esc(note)}</span>`
+    : `<span style="color:#c7c7cc">-</span>`;
+  return `<div id="noteSection" style="background:white;border-radius:12px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.07)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <label style="font-weight:700;font-size:14px;color:#1c1c1e">รายละเอียดเพิ่มเติม</label>
+      ${!isClosed ? `<button id="noteEditBtn" onclick="enableNoteEdit()"
+        style="background:none;border:1px solid #c7c7cc;border-radius:6px;padding:4px 12px;font-size:13px;cursor:pointer;color:#636366;font-family:inherit">
+        ✏️ แก้ไข
+      </button>` : ""}
+    </div>
+    <div id="noteViewMode">
+      <p id="noteViewText" style="color:#636366;font-size:14px;min-height:40px;margin:0">${viewText}</p>
+    </div>
+    <div id="noteEditMode" style="display:none">
+      <textarea id="noteInput" maxlength="2000" placeholder="กรอกรายละเอียดเพิ่มเติม..."
+        oninput="noteCharUpdate()"
+        style="width:100%;height:120px;padding:10px;border-radius:8px;border:1px solid #ddd;font-size:14px;resize:vertical;box-sizing:border-box;font-family:inherit;outline:none"></textarea>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
+        <span id="noteCharCount" style="font-size:12px;color:#8e8e93">0 / 2000</span>
+        <div style="display:flex;gap:8px">
+          <button onclick="cancelNoteEdit()"
+            style="border:1px solid #c7c7cc;background:white;border-radius:6px;padding:6px 16px;cursor:pointer;color:#636366;font-family:inherit;font-size:14px">
+            ยกเลิก
+          </button>
+          <button onclick="saveNote()"
+            style="background:#06C755;border:none;border-radius:6px;padding:6px 16px;color:white;font-weight:700;cursor:pointer;font-family:inherit;font-size:14px">
+            บันทึก
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function noteCharUpdate() {
+  const inp = document.getElementById("noteInput");
+  const cnt = document.getElementById("noteCharCount");
+  if (inp && cnt) cnt.textContent = `${inp.value.length} / 2000`;
+}
+
+function enableNoteEdit() {
+  if (currentProject?.status === "closed") {
+    toast("ไม่สามารถแก้ไขได้ เนื่องจากงานปิดแล้ว");
+    return;
+  }
+  document.getElementById("noteViewMode").style.display = "none";
+  document.getElementById("noteEditMode").style.display = "block";
+  const btn = document.getElementById("noteEditBtn");
+  if (btn) btn.style.display = "none";
+  const current = currentProject?.detail_note || "";
+  const inp = document.getElementById("noteInput");
+  if (inp) { inp.value = current; noteCharUpdate(); }
+}
+
+function cancelNoteEdit() {
+  document.getElementById("noteViewMode").style.display = "block";
+  document.getElementById("noteEditMode").style.display = "none";
+  const btn = document.getElementById("noteEditBtn");
+  if (btn) btn.style.display = "block";
+}
+
+async function saveNote() {
+  const inp  = document.getElementById("noteInput");
+  const note = inp ? inp.value : "";
+  const projectId = currentProject?.id;
+  if (!projectId) return;
+
+  try {
+    const res = await fetchWithTimeout(`${API}/api/v1/projects/${projectId}`, {
+      method:  "PUT",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+      body:    JSON.stringify({ detail_note: note }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      toast(err.error || "บันทึกไม่สำเร็จ");
+      return;
+    }
+    if (currentProject) currentProject.detail_note = note;
+    const p = projects.find(x => x.id === projectId);
+    if (p) p.detail_note = note;
+    const viewText = document.getElementById("noteViewText");
+    if (viewText) viewText.innerHTML = note
+      ? `<span style="white-space:pre-wrap">${esc(note)}</span>`
+      : `<span style="color:#c7c7cc">-</span>`;
+    cancelNoteEdit();
+    toast("บันทึกรายละเอียดแล้ว ✓");
+  } catch {
+    toast("ไม่สามารถเชื่อมต่อได้ กรุณาลองใหม่");
+  }
 }
 
 async function fetchProjectDocs(projectID) {
@@ -939,9 +1038,11 @@ async function doChangeStatus(projectID, status, statusNote, rejectReason, appoi
     renderPipeline();
     renderProjList();
     if (p) {
+      currentProject = p;
       // Re-render detail: refresh docs so status buttons reflect updated requirements
       document.getElementById("detailContent").innerHTML =
         buildDetailInfo(p) +
+        buildNoteSection(p) +
         `<div class="sec" style="margin-bottom:7px">เอกสาร</div>
          <div id="docsSection"><div class="spin-wrap"><div class="spinner"></div></div></div>
          <div class="sec" style="margin-bottom:7px">เปลี่ยนสถานะ</div>
