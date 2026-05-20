@@ -19,7 +19,7 @@
 
     /* ── App ── */
     #app { display: none; flex-direction: column; height: 100vh; overflow: hidden; }
-    .hdr { background: #06C755; color: white; padding: 11px 16px; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+    .hdr { background: #06C755; color: white; padding: 11px 16px; display: flex; align-items: center; gap: 10px; flex-shrink: 0; position: relative; }
     .hdr img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: rgba(255,255,255,.25); }
     .hdr-info h1 { font-size: 15px; font-weight: 600; }
     .hdr-info p  { font-size: 11px; opacity: .85; }
@@ -183,10 +183,25 @@
 <!-- ── App ── -->
 <div id="app">
   <div class="hdr">
-    <img id="uPic" src="" alt="">
-    <div class="hdr-info">
-      <h1>สวัสดี, <span id="uName">...</span></h1>
-      <p>Vizzel Sales CRM</p>
+    <div id="profileArea" style="display:flex;align-items:center;gap:10px;cursor:pointer;flex:1">
+      <img id="uPic" src="" alt="" style="width:32px;height:32px;border-radius:50%;object-fit:cover;background:rgba(255,255,255,.25)">
+      <div class="hdr-info">
+        <h1 style="font-size:15px;font-weight:600">สวัสดี, <span id="uName">...</span></h1>
+        <p style="font-size:11px;opacity:.85">Vizzel Sales CRM</p>
+      </div>
+    </div>
+
+    <!-- Profile dropdown -->
+    <div id="profileDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:white;border-radius:0 0 12px 12px;box-shadow:0 8px 24px rgba(0,0,0,.18);z-index:999;overflow:hidden;color:#1c1c1e">
+      <div style="padding:16px;border-bottom:1px solid #f0f0f0">
+        <div style="font-weight:700;font-size:15px" id="dropdownName">...</div>
+        <div style="font-size:12px;color:#8e8e93;margin-top:2px" id="dropdownRole"></div>
+        <div style="font-size:12px;color:#8e8e93" id="dropdownCompany"></div>
+      </div>
+      <div onclick="showProfileScreen('profile')" style="padding:13px 16px;cursor:pointer;font-size:14px;border-bottom:1px solid #f5f5f5">👤 ข้อมูลส่วนตัว</div>
+      <div id="menuMembers" onclick="showProfileScreen('members')" style="padding:13px 16px;cursor:pointer;font-size:14px;border-bottom:1px solid #f5f5f5;display:none">👥 ข้อมูลพนักงาน</div>
+      <div id="menuCompany" onclick="showProfileScreen('company')" style="padding:13px 16px;cursor:pointer;font-size:14px;border-bottom:1px solid #f5f5f5;display:none">🏢 ข้อมูลบริษัท</div>
+      <div onclick="logout()" style="padding:13px 16px;cursor:pointer;font-size:14px;color:#FF3B30">🚪 ออกจากระบบ</div>
     </div>
   </div>
 
@@ -244,6 +259,96 @@
 
 <div id="province-drop"></div>
 <div class="toast" id="toast"></div>
+
+<!-- ── Profile overlay (full-screen, z-index above everything) ── -->
+<div id="profileOverlay" style="display:none;position:fixed;inset:0;z-index:500;background:#f2f2f7;overflow-y:auto">
+  <!-- Sticky header with back button -->
+  <div style="background:#06C755;color:white;padding:11px 16px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:1">
+    <button onclick="hideProfileOverlay()" style="background:none;border:none;color:white;font-size:22px;cursor:pointer;padding:0;line-height:1">‹</button>
+    <h2 id="profileOverlayTitle" style="font-size:16px;font-weight:600;margin:0">ข้อมูลส่วนตัว</h2>
+  </div>
+
+  <!-- ── Screen: ข้อมูลส่วนตัว ── -->
+  <div id="screen-profile" style="display:none;padding:16px">
+    <div style="background:white;border-radius:12px;padding:20px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.07)">
+      <div style="margin-bottom:12px">
+        <div style="font-size:12px;color:#8e8e93;margin-bottom:4px">สังกัดบริษัท</div>
+        <div id="profileCompanyDisplay" style="font-size:15px;color:#1c1c1e">-</div>
+      </div>
+      <div style="margin-bottom:12px">
+        <div style="font-size:12px;color:#8e8e93;margin-bottom:4px">Role</div>
+        <div id="profileRoleDisplay" style="font-size:15px;color:#1c1c1e">-</div>
+      </div>
+      <div style="margin-bottom:4px">
+        <div style="font-size:12px;color:#8e8e93;margin-bottom:4px">ภูมิภาค</div>
+        <div id="profileRegionDisplay" style="font-size:15px;color:#1c1c1e">-</div>
+      </div>
+    </div>
+    <div style="background:white;border-radius:12px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.07)">
+      <div style="font-weight:700;font-size:14px;margin-bottom:16px">แก้ไขโปรไฟล์</div>
+      <div style="margin-bottom:12px">
+        <label style="font-size:13px;color:#636366;font-weight:600">ชื่อ</label>
+        <input id="editFirstName" type="text" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;margin-top:6px;outline:none;box-sizing:border-box">
+      </div>
+      <div style="margin-bottom:12px">
+        <label style="font-size:13px;color:#636366;font-weight:600">นามสกุล</label>
+        <input id="editLastName" type="text" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;margin-top:6px;outline:none;box-sizing:border-box">
+      </div>
+      <div style="margin-bottom:12px">
+        <label style="font-size:13px;color:#636366;font-weight:600">เบอร์โทร</label>
+        <input id="editPhone" type="tel" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;margin-top:6px;outline:none;box-sizing:border-box">
+      </div>
+      <div style="margin-bottom:12px">
+        <label style="font-size:13px;color:#636366;font-weight:600">Email</label>
+        <input id="editEmail" type="email" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;margin-top:6px;outline:none;box-sizing:border-box">
+      </div>
+      <div style="margin-bottom:20px">
+        <label style="font-size:13px;color:#636366;font-weight:600">ภูมิภาค</label>
+        <select id="editRegion" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;margin-top:6px;outline:none;appearance:none;background:white;box-sizing:border-box">
+          <option value="">-- เลือกภูมิภาค --</option>
+          <option value="ภาคเหนือ">ภาคเหนือ</option>
+          <option value="ภาคกลาง">ภาคกลาง</option>
+          <option value="ภาคตะวันออกเฉียงเหนือ">ภาคตะวันออกเฉียงเหนือ</option>
+          <option value="ภาคตะวันออก">ภาคตะวันออก</option>
+          <option value="ภาคตะวันตก">ภาคตะวันตก</option>
+          <option value="ภาคใต้">ภาคใต้</option>
+        </select>
+      </div>
+      <button onclick="saveProfile()" class="btn btn-green">บันทึก</button>
+    </div>
+  </div>
+
+  <!-- ── Screen: ข้อมูลพนักงาน ── -->
+  <div id="screen-members" style="display:none;padding:16px">
+    <div id="membersList"></div>
+  </div>
+
+  <!-- ── Screen: ข้อมูลบริษัท ── -->
+  <div id="screen-company" style="display:none;padding:16px">
+    <div style="background:white;border-radius:12px;padding:20px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.07)">
+      <div style="font-weight:700;font-size:14px;margin-bottom:16px">ข้อมูลบริษัท</div>
+      <div style="margin-bottom:12px">
+        <label style="font-size:13px;color:#636366;font-weight:600">ชื่อบริษัท *</label>
+        <input id="companyName" type="text" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;margin-top:6px;outline:none;box-sizing:border-box">
+      </div>
+      <div style="margin-bottom:12px">
+        <label style="font-size:13px;color:#636366;font-weight:600">ที่อยู่</label>
+        <textarea id="companyAddress" rows="3" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;margin-top:6px;outline:none;resize:none;box-sizing:border-box"></textarea>
+      </div>
+      <div style="margin-bottom:20px">
+        <label style="font-size:13px;color:#636366;font-weight:600">เลขนิติบุคคล</label>
+        <input id="companyTaxId" type="text" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;margin-top:6px;outline:none;box-sizing:border-box">
+      </div>
+      <button onclick="saveCompany()" class="btn btn-green">บันทึกข้อมูลบริษัท</button>
+    </div>
+    <div style="background:white;border-radius:12px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.07)">
+      <div style="font-weight:700;margin-bottom:8px">🔑 Invite Code</div>
+      <div style="font-size:13px;color:#8e8e93;margin-bottom:12px">ใช้ code นี้สำหรับเชิญพนักงานใหม่</div>
+      <div id="inviteCodeDisplay" style="background:#f5f5f5;border-radius:10px;padding:14px;font-size:22px;font-weight:700;letter-spacing:4px;text-align:center;color:#1c1c1e;margin-bottom:12px">--------</div>
+      <button onclick="copyInviteCode()" style="width:100%;background:#007AFF;color:white;border:none;padding:13px;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit">📋 คัดลอก Invite Code</button>
+    </div>
+  </div>
+</div>
 
 <!-- ── Create project modal ── -->
 <div id="createModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;">
@@ -342,6 +447,7 @@ let prevTab  = "pipeline";
 let detailProjectID = "";
 let currentProject  = null;
 let currentDocs     = [];
+let currentUser     = null;
 
 async function fetchWithTimeout(url, options = {}, timeoutMs = 8000) {
   const controller = new AbortController();
@@ -416,6 +522,20 @@ async function loginWithLine() {
   });
   if (!res.ok) throw new Error("auth failed " + res.status);
   token = (await res.json()).token;
+
+  // Load full user profile and populate dropdown
+  try {
+    const meRes = await fetchWithTimeout(API + "/api/v1/me", {
+      headers: { Authorization: "Bearer " + token },
+    });
+    if (meRes.ok) {
+      currentUser = await meRes.json();
+      document.getElementById("dropdownName").textContent    = currentUser.full_name || currentUser.first_name || profile.displayName;
+      document.getElementById("dropdownRole").textContent    = currentUser.role || "";
+      document.getElementById("dropdownCompany").textContent = currentUser.company_name || "";
+      applyRoleMenuVisibility(currentUser.role || "");
+    }
+  } catch(e) {}
 
   document.getElementById("splash").style.display = "none";
   document.getElementById("app").style.display    = "flex";
@@ -1259,6 +1379,188 @@ function fmtSize(bytes) {
   if (bytes < 1024)        return bytes + " B";
   if (bytes < 1048576)     return (bytes / 1024).toFixed(1) + " KB";
   return (bytes / 1048576).toFixed(1) + " MB";
+}
+
+/* ─── Profile dropdown toggle ─── */
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("profileArea").addEventListener("click", e => {
+    e.stopPropagation();
+    const dd = document.getElementById("profileDropdown");
+    dd.style.display = dd.style.display === "none" ? "block" : "none";
+  });
+  document.addEventListener("click", () => {
+    document.getElementById("profileDropdown").style.display = "none";
+  });
+  document.getElementById("profileDropdown").addEventListener("click", e => e.stopPropagation());
+});
+
+function applyRoleMenuVisibility(role) {
+  const showMembers = role === "support" || role === "admin";
+  document.getElementById("menuMembers").style.display = showMembers ? "block" : "none";
+  document.getElementById("menuCompany").style.display = role === "admin"  ? "block" : "none";
+}
+
+function showProfileScreen(name) {
+  document.getElementById("profileDropdown").style.display = "none";
+  ["profile","members","company"].forEach(s => {
+    document.getElementById("screen-" + s).style.display = "none";
+  });
+  const titles = { profile: "ข้อมูลส่วนตัว", members: "ข้อมูลพนักงาน", company: "ข้อมูลบริษัท" };
+  document.getElementById("profileOverlayTitle").textContent = titles[name] || "";
+  document.getElementById("screen-" + name).style.display = "block";
+  document.getElementById("profileOverlay").style.display  = "block";
+  if (name === "profile")  loadMe();
+  else if (name === "members") loadMembers();
+  else if (name === "company") loadCompany();
+}
+
+function hideProfileOverlay() {
+  document.getElementById("profileOverlay").style.display = "none";
+}
+
+function logout() {
+  document.getElementById("profileDropdown").style.display = "none";
+  hideProfileOverlay();
+  token = "";
+  currentUser = null;
+  document.getElementById("app").style.display    = "none";
+  document.getElementById("splash").style.display = "flex";
+  try { liff.logout(); } catch(e) {}
+}
+
+/* ─── Profile: ข้อมูลส่วนตัว ─── */
+async function loadMe() {
+  try {
+    const res = await fetchWithTimeout(API + "/api/v1/me", {
+      headers: { Authorization: "Bearer " + token },
+    });
+    if (!res.ok) return;
+    const u = await res.json();
+    currentUser = u;
+    document.getElementById("profileCompanyDisplay").textContent = u.company_name || "-";
+    document.getElementById("profileRoleDisplay").textContent    = u.role         || "-";
+    document.getElementById("profileRegionDisplay").textContent  = u.region       || "-";
+    document.getElementById("editFirstName").value = u.first_name || "";
+    document.getElementById("editLastName").value  = u.last_name  || "";
+    document.getElementById("editPhone").value     = u.phone      || "";
+    document.getElementById("editEmail").value     = u.email      || "";
+    const regionSel = document.getElementById("editRegion");
+    if (u.region) regionSel.value = u.region;
+  } catch(e) {}
+}
+
+async function saveProfile() {
+  const body = {
+    first_name: document.getElementById("editFirstName").value.trim(),
+    last_name:  document.getElementById("editLastName").value.trim(),
+    phone:      document.getElementById("editPhone").value.trim(),
+    email:      document.getElementById("editEmail").value.trim(),
+    region:     document.getElementById("editRegion").value,
+  };
+  try {
+    const res = await fetchWithTimeout(API + "/api/v1/me", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+      body: JSON.stringify(body),
+    });
+    if (res.ok) { toast("บันทึกสำเร็จ ✓"); loadMe(); }
+    else { const e = await res.json().catch(() => ({})); toast(e.error || "บันทึกไม่สำเร็จ"); }
+  } catch { toast("ไม่สามารถเชื่อมต่อได้"); }
+}
+
+/* ─── Members: ข้อมูลพนักงาน ─── */
+async function loadMembers() {
+  try {
+    const res = await fetchWithTimeout(API + "/api/v1/company/members", {
+      headers: { Authorization: "Bearer " + token },
+    });
+    if (!res.ok) {
+      document.getElementById("membersList").innerHTML = emptyH("🔒","ไม่มีสิทธิ์เข้าถึง");
+      return;
+    }
+    renderMembers(await res.json());
+  } catch { document.getElementById("membersList").innerHTML = emptyH("⚠️","โหลดไม่สำเร็จ"); }
+}
+
+function renderMembers(members) {
+  const isAdmin = currentUser?.role === "admin";
+  if (!members.length) {
+    document.getElementById("membersList").innerHTML = emptyH("👥","ยังไม่มีพนักงาน");
+    return;
+  }
+  document.getElementById("membersList").innerHTML = members.map(m => `
+    <div style="background:white;border-radius:12px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.07)">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:14px">${esc((m.first_name + " " + m.last_name).trim() || m.full_name || "-")}</div>
+          <div style="font-size:13px;color:#636366;margin-top:2px">${esc(m.email || "-")}${m.phone ? " · " + esc(m.phone) : ""}</div>
+          <div style="font-size:12px;color:#8e8e93;margin-top:1px">${esc(m.region || "")}</div>
+        </div>
+        ${isAdmin
+          ? `<select onchange="changeMemberRole('${esc(m.id)}', this.value)"
+               style="padding:6px 10px;border-radius:8px;border:1.5px solid #e5e5ea;font-size:13px;font-family:inherit;outline:none"
+               ${m.id === currentUser?.id ? "disabled" : ""}>
+               <option value="dealer"  ${m.role==="dealer" ?"selected":""}>Dealer</option>
+               <option value="support" ${m.role==="support"?"selected":""}>Support</option>
+               <option value="admin"   ${m.role==="admin"  ?"selected":""}>Admin</option>
+             </select>`
+          : `<span style="background:#e4f9ec;color:#34C759;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600">${esc(m.role||"")}</span>`}
+      </div>
+    </div>`).join("");
+}
+
+async function changeMemberRole(userId, newRole) {
+  if (!confirm(`เปลี่ยน role เป็น "${newRole}" ใช่ไหม?`)) { loadMembers(); return; }
+  try {
+    await fetchWithTimeout(`${API}/api/v1/company/members/${userId}/role`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+      body: JSON.stringify({ role: newRole }),
+    });
+    loadMembers();
+  } catch { toast("เปลี่ยน role ไม่สำเร็จ"); }
+}
+
+/* ─── Company: ข้อมูลบริษัท ─── */
+async function loadCompany() {
+  try {
+    const res = await fetchWithTimeout(API + "/api/v1/company", {
+      headers: { Authorization: "Bearer " + token },
+    });
+    if (!res.ok) {
+      document.getElementById("screen-company").innerHTML = "<p style='text-align:center;padding:40px;color:#8e8e93'>ไม่มีสิทธิ์เข้าถึง</p>";
+      return;
+    }
+    const c = await res.json();
+    document.getElementById("companyName").value    = c.name    || "";
+    document.getElementById("companyAddress").value = c.address || "";
+    document.getElementById("companyTaxId").value   = c.tax_id  || "";
+    if (c.invite_code) {
+      document.getElementById("inviteCodeDisplay").textContent = c.invite_code;
+    }
+  } catch { toast("โหลดข้อมูลบริษัทไม่สำเร็จ"); }
+}
+
+async function saveCompany() {
+  try {
+    const res = await fetchWithTimeout(API + "/api/v1/company", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+      body: JSON.stringify({
+        name:    document.getElementById("companyName").value.trim(),
+        address: document.getElementById("companyAddress").value.trim(),
+        tax_id:  document.getElementById("companyTaxId").value.trim(),
+      }),
+    });
+    if (res.ok) toast("บันทึกบริษัทสำเร็จ ✓");
+    else toast("บันทึกไม่สำเร็จ");
+  } catch { toast("ไม่สามารถเชื่อมต่อได้"); }
+}
+
+function copyInviteCode() {
+  const code = document.getElementById("inviteCodeDisplay").textContent.trim();
+  navigator.clipboard?.writeText(code).catch(() => {});
+  toast("คัดลอก Invite Code แล้ว ✓");
 }
 
 // When the user returns from the external upload page, refresh the
