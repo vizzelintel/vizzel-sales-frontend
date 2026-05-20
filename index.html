@@ -735,7 +735,7 @@ async function saveNote() {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      toast(err.error || "บันทึกไม่สำเร็จ");
+      toast(err.error || `บันทึกไม่สำเร็จ (${res.status})`);
       return;
     }
     if (currentProject) currentProject.detail_note = note;
