@@ -513,6 +513,17 @@ document.addEventListener("DOMContentLoaded", () => {
     if (e.target === this) closeCreateModal();
   });
 
+  // Refresh document list when upload tab posts UPLOAD_SUCCESS back to this window
+  window.addEventListener("message", function(event) {
+    if (!event.data || event.data.type !== "UPLOAD_SUCCESS") return;
+    if (!detailProjectID) return;
+    fetchProjectDocs(detailProjectID).then(docs => {
+      renderDocsSection(docs, detailProjectID);
+      const p = projects.find(x => x.id === detailProjectID);
+      if (p) renderStatusSection(p, docs);
+    });
+  });
+
   document.getElementById("createProjectForm").addEventListener("submit", async function(e) {
     e.preventDefault();
 

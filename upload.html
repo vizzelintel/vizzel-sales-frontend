@@ -183,7 +183,16 @@ async function doUpload() {
     if (!res.ok) throw new Error(data.error || "upload failed");
 
     btn.style.display = "none";
-    showMsg("อัปโหลดสำเร็จ ✓\n\nกลับไปที่แอป Vizzel Sales\nระบบจะอัปเดตรายการเอกสารโดยอัตโนมัติ", true);
+    showMsg("อัปโหลดสำเร็จ ✓\n\nกำลังปิดหน้านี้และกลับไปที่แอป...", true);
+
+    setTimeout(() => {
+      if (window.opener) {
+        try { window.opener.postMessage({ type: 'UPLOAD_SUCCESS' }, '*'); } catch(e) {}
+        window.close();
+      } else {
+        window.location.href = 'https://vizzelintel.github.io/vizzel-sales-frontend/';
+      }
+    }, 1500);
   } catch(e) {
     btn.disabled = false;
     btn.textContent = "อัปโหลด";
