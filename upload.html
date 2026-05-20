@@ -98,12 +98,25 @@ const PROJECT_ID = params.get("project_id") || "";
 const TOKEN      = params.get("token")      || "";
 const API_BASE   = "https://vizzel-sales-api.fly.dev";
 
-// Pre-select doc_type when passed from LIFF
-const preType = params.get("doc_type") || "";
-if (preType) {
+// Maps any Thai label (from old links) to the canonical English doc_type value
+const DOC_TYPE_MAP = {
+  'ใบเสนอราคา':                          'quotation',
+  'ส่งใบเสนอราคา':                        'quotation',
+  'สัญญา':                               'contract',
+  'เอกสารสัญญา':                          'contract',
+  'แนบเอกสารสัญญาจัดซื้อจัดจ้าง':        'contract',
+  'ปิดงาน':                              'closing',
+  'เอกสารปิดงาน':                         'closing',
+  'แนบเอกสารปิดงานและตรวจนับสินทรัพย์':  'closing',
+};
+
+// Pre-select doc_type when passed from LIFF (supports both English values and Thai labels)
+const rawDocType    = params.get("doc_type") || "";
+const mappedDocType = DOC_TYPE_MAP[rawDocType] || rawDocType;
+if (mappedDocType) {
   const sel = document.getElementById("doc-type");
   for (const opt of sel.options) {
-    if (opt.value === preType) { opt.selected = true; break; }
+    if (opt.value === mappedDocType) { opt.selected = true; break; }
   }
 }
 
