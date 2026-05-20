@@ -71,10 +71,12 @@
     <div class="lbl">ประเภทเอกสาร *</div>
     <select id="doc-type">
       <option value="">-- เลือกประเภท --</option>
-      <option value="quotation">ใบเสนอราคา</option>
-      <option value="tor">ร่าง TOR</option>
+      <option value="quotation_support">ใบเสนอราคา (Support)</option>
+      <option value="tor_support">ร่าง TOR (Support)</option>
+      <option value="tor_dealer">ร่าง TOR (Dealer)</option>
       <option value="contract">เอกสารสัญญา</option>
       <option value="closing">เอกสารปิดงาน</option>
+      <option value="site_survey">เอกสาร Site Survey</option>
     </select>
   </div>
 
@@ -101,16 +103,20 @@ const API_BASE   = "https://vizzel-sales-api.fly.dev";
 
 // Maps any Thai label (from old links) to the canonical English doc_type value
 const DOC_TYPE_MAP = {
-  'ใบเสนอราคา':                          'quotation',
-  'ส่งใบเสนอราคา':                        'quotation',
-  'ร่าง TOR':                            'tor',
-  'ส่งร่าง TOR':                          'tor',
+  // Thai labels → new English values
+  'ใบเสนอราคา':                          'quotation_support',
+  'ส่งใบเสนอราคา':                        'quotation_support',
+  'ร่าง TOR':                            'tor_support',
+  'ส่งร่าง TOR':                          'tor_support',
   'สัญญา':                               'contract',
   'เอกสารสัญญา':                          'contract',
   'แนบเอกสารสัญญาจัดซื้อจัดจ้าง':        'contract',
   'ปิดงาน':                              'closing',
   'เอกสารปิดงาน':                         'closing',
   'แนบเอกสารปิดงานและตรวจนับสินทรัพย์':  'closing',
+  // Old doc type keys → new keys (backward compat for old links)
+  'quotation':    'quotation_support',
+  'tor':          'tor_support',
 };
 
 // Pre-select doc_type when passed from LIFF (supports both English values and Thai labels)

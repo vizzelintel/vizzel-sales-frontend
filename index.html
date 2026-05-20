@@ -156,6 +156,9 @@
     .ov-btn-primary { background: #06C755; color: white; }
     .ov-btn-cancel  { background: #f2f2f7; color: #3c3c43; }
 
+    /* ── Action panel label ── */
+    .ap-lbl { font-size: 12px; color: #636366; font-weight: 600; margin-bottom: 2px; }
+
     /* ── Misc ── */
     .spin-wrap { display: flex; justify-content: center; padding: 36px 0; }
     .spinner   { width: 28px; height: 28px; border: 3px solid #e5e5ea; border-top-color: #06C755; border-radius: 50%; animation: spin .7s linear infinite; }
@@ -356,47 +359,27 @@ const STATUS = {
   registrator: { label: "Registrator",     short: "Registr.",   group: "gray"   },
   present:     { label: "นัดหมาย Present", short: "Present",    group: "blue"   },
   demo:        { label: "นัดหมาย Demo",    short: "Demo",       group: "blue"   },
-  site_survey: { label: "นัดหมาย Site Survey", short: "Site Survey", group: "blue" },
+  site_survey: { label: "Site Survey",     short: "Survey",     group: "blue"   },
   quotation:   { label: "ส่งใบเสนอราคา",  short: "Quotation",  group: "orange" },
   tor:         { label: "ส่งร่าง TOR",     short: "TOR",        group: "orange" },
-  contract:    { label: "แนบสัญญา",        short: "Contract",   group: "orange" },
-  won:         { label: "Won",             short: "Won",        group: "green"  },
-  closing:     { label: "แนบเอกสารปิดงาน", short: "Closing",    group: "green"  },
+  contract:    { label: "สัญญาแล้ว",       short: "Contract",   group: "green"  },
   closed:      { label: "ปิดงาน",          short: "Closed",     group: "green"  },
   reject:      { label: "Reject",          short: "Reject",     group: "red"    },
 };
 const STATUS_KEYS = Object.keys(STATUS);
 
-/* Transitions: which statuses can follow each status */
-const NEXT = {
-  registrator:  ["present","demo","site_survey","reject"],
-  present:      ["demo","site_survey","quotation","reject"],
-  demo:         ["site_survey","quotation","reject"],
-  site_survey:  ["quotation","reject"],
-  quotation:    ["tor","contract","reject"],
-  tor:          ["contract","reject"],
-  contract:     ["won","reject"],
-  won:          ["closing"],
-  closing:      ["closed","reject"],
-  closed:       [],
-  reject:       ["registrator"],
-};
-
-/* Sequential doc requirements per status (mirrors backend statusDocRequirements) */
-const DOC_REQUIREMENTS = {
-  contract: ["quotation"],
-  closing:  ["quotation","contract"],
-  closed:   ["quotation","contract","closing"],
-};
-
+/* Doc type display names (new scheme – auto-advance via upload) */
 const DOC_NAMES = {
-  quotation: "ใบเสนอราคา",
-  tor:       "ร่าง TOR",
-  contract:  "เอกสารสัญญา",
-  closing:   "เอกสารปิดงาน",
+  quotation_support: "ใบเสนอราคา (Support)",
+  tor_support:       "ร่าง TOR (Support)",
+  tor_dealer:        "ร่าง TOR (Dealer)",
+  contract:          "เอกสารสัญญา",
+  closing:           "เอกสารปิดงาน",
+  site_survey:       "เอกสาร Site Survey",
 };
 
-const DOC_TYPES_SEQ = ["quotation","tor","contract","closing"];
+/* Sequential progress bar doc types */
+const DOC_TYPES_SEQ = ["quotation_support","tor_support","contract","closing"];
 
 /* Statuses that trigger a Google Calendar appointment */
 const APPT_STATUSES = new Set(["present","demo","site_survey"]);
@@ -660,8 +643,9 @@ function buildDetailInfo(p) {
     ["โทรศัพท์",   p.contact_phone
         ? `<a href="tel:${esc(p.contact_phone)}">${esc(p.contact_phone)}</a>` : "-"],
     ["สถานะ",      `<span class="bdg bg-${STATUS[p.status]?.group||'gray'}">${STATUS[p.status]?.label||p.status}</span>`],
-    ...(p.reject_reason ? [["เหตุผล Reject", esc(p.reject_reason)]] : []),
-    ...(p.status_note   ? [["หมายเหตุ",      esc(p.status_note)]]   : []),
+    ...(p.present_type  ? [["รูปแบบ Present", p.present_type === "online" ? "🖥 Online" : "🏢 Onsite"]] : []),
+    ...(p.reject_reason ? [["เหตุผล Reject",  esc(p.reject_reason)]] : []),
+    ...(p.status_note   ? [["หมายเหตุ",       esc(p.status_note)]]   : []),
     ["สร้างเมื่อ", fmtDate(p.created_at)],
   ];
   return `<div class="dcard" style="margin-bottom:12px">${
@@ -723,50 +707,200 @@ function renderDocsSection(docs, projectID) {
             onclick="openUploadOverlay('${esc(projectID)}')">+ แนบเอกสาร</button>`;
 }
 
+/* ─── Action panels (replaces old status buttons) ─── */
+
 function renderStatusSection(p, docs) {
   const el = document.getElementById("statusSection");
   if (!el) return;
 
-  const nexts = NEXT[p.status] || [];
-  if (!nexts.length) {
-    el.innerHTML = `<p style="color:#8e8e93;font-size:13px;text-align:center;padding:16px">สิ้นสุดกระบวนการ</p>`;
+  // Terminal states: read-only banners
+  if (p.status === "closed") {
+    el.innerHTML = `<div class="dcard" style="padding:20px;text-align:center">
+      <div style="font-size:28px;margin-bottom:8px">✅</div>
+      <div style="font-weight:700;font-size:16px;color:#34C759">ปิดงานเรียบร้อยแล้ว</div>
+    </div>`;
+    return;
+  }
+  if (p.status === "reject") {
+    el.innerHTML = `<div class="dcard" style="padding:20px;text-align:center">
+      <div style="font-size:28px;margin-bottom:8px">❌</div>
+      <div style="font-weight:700;font-size:16px;color:#FF3B30">งานนี้ถูกปฏิเสธ</div>
+      ${p.reject_reason ? `<div style="font-size:13px;color:#636366;margin-top:8px">${esc(p.reject_reason)}</div>` : ''}
+    </div>`;
     return;
   }
 
-  const docTypeSet = new Set(docs.map(d => d.doc_type));
-  const btns = nexts.map(s => {
-    const g       = STATUS[s]?.group || "gray";
-    const missing = (DOC_REQUIREMENTS[s] || []).filter(dt => !docTypeSet.has(dt));
-    if (missing.length) {
-      return `<div class="sbtn-wrap">
-        <button class="sbtn cg-gray sbtn-blocked" disabled>${STATUS[s]?.label || s}</button>
-        <span class="sbtn-hint">ต้องการ: ${DOC_NAMES[missing[0]]}</span>
+  let html = "";
+  const iid = esc(p.id);
+
+  if (p.status === "registrator") {
+    // ── Present scheduling panel ──────────────────────────────────────
+    html = `<div class="dcard" style="padding:16px;margin-bottom:12px">
+      <div style="font-weight:700;font-size:15px;color:#007AFF;margin-bottom:14px">📅 นัดหมาย Present</div>
+      <div style="margin-bottom:10px">
+        <div class="ap-lbl">วันและเวลานัดหมาย *</div>
+        <input type="datetime-local" id="ap-present-date"
+          style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;margin-top:6px;outline:none;box-sizing:border-box">
+      </div>
+      <div style="margin-bottom:10px">
+        <div class="ap-lbl">รูปแบบ *</div>
+        <select id="ap-present-type"
+          style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;margin-top:6px;outline:none;appearance:none;background:white;box-sizing:border-box">
+          <option value="">-- เลือกรูปแบบ --</option>
+          <option value="online">🖥 Online</option>
+          <option value="onsite">🏢 Onsite</option>
+        </select>
+      </div>
+      <div style="margin-bottom:14px">
+        <div class="ap-lbl">บันทึก/หมายเหตุ</div>
+        <textarea id="ap-present-note" placeholder="หมายเหตุ..."
+          style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:14px;font-family:inherit;margin-top:6px;outline:none;resize:none;height:70px;box-sizing:border-box"></textarea>
+      </div>
+      <button class="btn btn-green" onclick="submitPresent('${iid}')">ยืนยันนัดหมาย Present</button>
+    </div>`;
+
+  } else {
+    // ── Primary document upload panel ────────────────────────────────
+    const s = p.status;
+    let primaryHtml = "";
+    if (s === "present" || s === "demo" || s === "site_survey") {
+      primaryHtml = `<div class="dcard" style="padding:16px;margin-bottom:12px">
+        <div style="font-weight:700;font-size:15px;margin-bottom:6px">📋 แนบใบเสนอราคา</div>
+        <div style="font-size:12px;color:#8e8e93;margin-bottom:12px">อัปโหลดเพื่อเปลี่ยนสถานะเป็น Quotation</div>
+        <button class="btn btn-green" onclick="openDocUpload('${iid}','quotation_support')">📎 อัปโหลดใบเสนอราคา (Support)</button>
+      </div>`;
+    } else if (s === "quotation") {
+      primaryHtml = `<div class="dcard" style="padding:16px;margin-bottom:12px">
+        <div style="font-weight:700;font-size:15px;margin-bottom:6px">📄 แนบร่าง TOR</div>
+        <div style="font-size:12px;color:#8e8e93;margin-bottom:12px">อัปโหลดเพื่อเปลี่ยนสถานะเป็น TOR</div>
+        <button class="btn btn-green" onclick="openDocUpload('${iid}','tor_support')" style="margin-bottom:8px">📎 แนบ TOR จาก Support *</button>
+        <button class="btn" style="background:#f2f2f7;color:#636366;font-size:13px" onclick="openDocUpload('${iid}','tor_dealer')">📎 แนบ TOR จาก Dealer (ไม่บังคับ)</button>
+      </div>`;
+    } else if (s === "tor") {
+      primaryHtml = `<div class="dcard" style="padding:16px;margin-bottom:12px">
+        <div style="font-weight:700;font-size:15px;margin-bottom:6px">📜 แนบเอกสารสัญญา</div>
+        <div style="font-size:12px;color:#8e8e93;margin-bottom:12px">อัปโหลดเพื่อเปลี่ยนสถานะเป็น Contract</div>
+        <button class="btn btn-green" onclick="openDocUpload('${iid}','contract')">📎 อัปโหลดสัญญาจัดซื้อจัดจ้าง</button>
+      </div>`;
+    } else if (s === "contract") {
+      primaryHtml = `<div class="dcard" style="padding:16px;margin-bottom:12px">
+        <div style="font-weight:700;font-size:15px;margin-bottom:6px">🏁 แนบเอกสารปิดงาน</div>
+        <div style="font-size:12px;color:#8e8e93;margin-bottom:12px">อัปโหลดโดยทีม Support เพื่อปิดโครงการ</div>
+        <button class="btn btn-green" onclick="openDocUpload('${iid}','closing')">📎 อัปโหลดเอกสารปิดงาน</button>
       </div>`;
     }
-    return `<button class="sbtn cg-${g}" onclick="tryChangeStatus('${esc(p.id)}','${s}')">${STATUS[s]?.label || s}</button>`;
-  }).join("");
+    html += primaryHtml;
 
-  el.innerHTML = `<div class="dcard" style="padding:14px"><div class="sbtn-grid">${btns}</div></div>`;
+    // ── Optional Demo panel (collapsible) ────────────────────────────
+    html += `<div class="dcard" style="margin-bottom:12px;overflow:hidden">
+      <button onclick="toggleActionPanel('demo-panel','demo-arrow')"
+        style="width:100%;padding:14px 16px;background:none;border:none;text-align:left;font-size:14px;font-weight:600;cursor:pointer;color:#007AFF;font-family:inherit;display:flex;align-items:center;gap:8px">
+        <span id="demo-arrow">›</span> + นัดหมาย Demo (ไม่บังคับ)
+      </button>
+      <div id="demo-panel" style="display:none;padding:0 16px 16px">
+        <div style="margin-bottom:10px">
+          <div class="ap-lbl">วันและเวลา *</div>
+          <input type="datetime-local" id="ap-demo-date"
+            style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;margin-top:6px;outline:none;box-sizing:border-box">
+        </div>
+        <div style="margin-bottom:12px">
+          <div class="ap-lbl">หมายเหตุ</div>
+          <textarea id="ap-demo-note" placeholder="หมายเหตุ..."
+            style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:14px;font-family:inherit;margin-top:6px;outline:none;resize:none;height:60px;box-sizing:border-box"></textarea>
+        </div>
+        <button class="btn btn-green" style="font-size:14px" onclick="submitDemo('${iid}')">บันทึกนัด Demo</button>
+      </div>
+    </div>`;
+
+    // ── Optional Site Survey panel (collapsible) ──────────────────────
+    html += `<div class="dcard" style="margin-bottom:12px;overflow:hidden">
+      <button onclick="toggleActionPanel('survey-panel','survey-arrow')"
+        style="width:100%;padding:14px 16px;background:none;border:none;text-align:left;font-size:14px;font-weight:600;cursor:pointer;color:#007AFF;font-family:inherit;display:flex;align-items:center;gap:8px">
+        <span id="survey-arrow">›</span> + นัดหมาย Site Survey (ไม่บังคับ)
+      </button>
+      <div id="survey-panel" style="display:none;padding:0 16px 16px">
+        <div style="margin-bottom:10px">
+          <div class="ap-lbl">วันและเวลา *</div>
+          <input type="datetime-local" id="ap-survey-date"
+            style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;margin-top:6px;outline:none;box-sizing:border-box">
+        </div>
+        <div style="margin-bottom:10px">
+          <div class="ap-lbl">หมายเหตุ</div>
+          <textarea id="ap-survey-note" placeholder="หมายเหตุ..."
+            style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:14px;font-family:inherit;margin-top:6px;outline:none;resize:none;height:60px;box-sizing:border-box"></textarea>
+        </div>
+        <div style="margin-bottom:12px">
+          <div class="ap-lbl">แนบไฟล์ (ไม่บังคับ)</div>
+          <button class="btn" style="margin-top:6px;background:#f2f2f7;color:#636366;font-size:13px"
+            onclick="openDocUpload('${iid}','site_survey')">📎 อัปโหลดไฟล์ Site Survey</button>
+        </div>
+        <button class="btn btn-green" style="font-size:14px" onclick="submitSurvey('${iid}')">บันทึกนัด Site Survey</button>
+      </div>
+    </div>`;
+  }
+
+  // ── Reject button (all statuses except closed/reject) ────────────
+  html += `<button onclick="openRejectPanel('${iid}')"
+    style="width:100%;margin-top:4px;padding:12px;border:2px solid #FF3B30;border-radius:12px;background:white;color:#FF3B30;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">
+    ❌ Reject งานนี้
+  </button>`;
+
+  el.innerHTML = html;
 }
 
-/* ─── Status change ─── */
+/* ─── Action panel helpers ─── */
+
+function toggleActionPanel(panelId, arrowId) {
+  const panel = document.getElementById(panelId);
+  const arrow = document.getElementById(arrowId);
+  if (!panel) return;
+  const open = panel.style.display === "none";
+  panel.style.display = open ? "block" : "none";
+  if (arrow) arrow.textContent = open ? "⌄" : "›";
+}
+
+function openDocUpload(projectId, docType) {
+  const url = "https://vizzelintel.github.io/vizzel-sales-frontend/upload.html" +
+    "?project_id=" + encodeURIComponent(projectId) +
+    "&token="      + encodeURIComponent(token) +
+    "&doc_type="   + encodeURIComponent(docType);
+  liff.openWindow({ url, external: true });
+}
+
+async function submitPresent(projectId) {
+  const date = document.getElementById("ap-present-date")?.value;
+  const type = document.getElementById("ap-present-type")?.value;
+  const note = document.getElementById("ap-present-note")?.value.trim() || "";
+  if (!date) { toast("กรุณาเลือกวันและเวลานัดหมาย"); return; }
+  if (!type) { toast("กรุณาเลือกรูปแบบ (Online/Onsite)"); return; }
+  await doChangeStatus(projectId, "present", note, "", new Date(date).toISOString(), "", type);
+}
+
+async function submitDemo(projectId) {
+  const date = document.getElementById("ap-demo-date")?.value;
+  const note = document.getElementById("ap-demo-note")?.value.trim() || "";
+  if (!date) { toast("กรุณาเลือกวันและเวลา"); return; }
+  await doChangeStatus(projectId, "demo", note, "", new Date(date).toISOString());
+}
+
+async function submitSurvey(projectId) {
+  const date = document.getElementById("ap-survey-date")?.value;
+  const note = document.getElementById("ap-survey-note")?.value.trim() || "";
+  if (!date) { toast("กรุณาเลือกวันและเวลา"); return; }
+  await doChangeStatus(projectId, "site_survey", note, "", new Date(date).toISOString());
+}
+
+function openRejectPanel(projectId) {
+  _pendingProjectID = projectId;
+  _pendingStatus    = "reject";
+  openRejectOverlay();
+}
+
+/* ─── (keep for compatibility – Reject still uses overlay) ─── */
 let _pendingStatus    = "";
 let _pendingProjectID = "";
 
-function tryChangeStatus(projectID, newStatus) {
-  _pendingStatus    = newStatus;
-  _pendingProjectID = projectID;
-
-  if (APPT_STATUSES.has(newStatus)) {
-    openApptOverlay(newStatus);
-  } else if (newStatus === "reject") {
-    openRejectOverlay();
-  } else {
-    doChangeStatus(projectID, newStatus, "", "");
-  }
-}
-
-async function doChangeStatus(projectID, status, statusNote, rejectReason, appointmentDate, appointmentNote) {
+async function doChangeStatus(projectID, status, statusNote, rejectReason, appointmentDate, appointmentNote, presentType) {
   try {
     const res = await fetchWithTimeout(`${API}/api/v1/projects/${projectID}/status`, {
       method: "PUT",
@@ -777,6 +911,7 @@ async function doChangeStatus(projectID, status, statusNote, rejectReason, appoi
         reject_reason:    rejectReason    || "",
         appointment_date: appointmentDate || "",
         appointment_note: appointmentNote || "",
+        present_type:     presentType     || "",
       }),
     });
     const data = await res.json();
@@ -790,6 +925,7 @@ async function doChangeStatus(projectID, status, statusNote, rejectReason, appoi
       p.appointment_date  = appointmentDate || "";
       p.appointment_note  = appointmentNote || "";
       p.calendar_event_id = data.calendar_event_id || "";
+      if (presentType) p.present_type = presentType;
     }
 
     if (APPT_STATUSES.has(status) && appointmentDate) {
@@ -828,29 +964,7 @@ async function doChangeStatus(projectID, status, statusNote, rejectReason, appoi
   } catch { toast("เปลี่ยนสถานะไม่สำเร็จ"); }
 }
 
-/* ─── Overlay: appointment ─── */
-function openApptOverlay(newStatus) {
-  document.getElementById("ov-title").textContent = STATUS[newStatus]?.label || newStatus;
-  document.getElementById("ov-sub").textContent   = "กรอกรายละเอียดนัดหมาย";
-  document.getElementById("ov-body").innerHTML    = `
-    <div class="ov-section">
-      <div class="ov-label">วันและเวลานัดหมาย *</div>
-      <input type="datetime-local" class="ov-input" id="ov-appt-date">
-    </div>
-    <div class="ov-section">
-      <div class="ov-label">บันทึกย่อ</div>
-      <textarea class="ov-input" id="ov-appt-note" placeholder="หมายเหตุเพิ่มเติม..."></textarea>
-    </div>`;
-  document.getElementById("ov-confirm").textContent = "ยืนยันนัดหมาย";
-  document.getElementById("overlay").classList.add("on");
-}
-
-/* ─── Overlay: document upload via external browser ─── */
-// LINE Android blocks non-image file inputs in the in-app WebView.
-// Fix: open upload.html in an external browser (Chrome/Safari) where
-// the native file picker works normally, then detect when the user
-// returns and auto-refresh the document list.
-
+/* ─── Overlay: ad-hoc document upload (generic fallback) ─── */
 function openUploadOverlay(projectID) {
   _pendingProjectID = projectID;
   _pendingStatus    = "__upload__";
@@ -862,10 +976,12 @@ function openUploadOverlay(projectID) {
       <div class="ov-label">ประเภทเอกสาร *</div>
       <select class="ov-input" id="ov-doctype">
         <option value="">-- เลือกประเภท --</option>
-        <option value="quotation">ใบเสนอราคา</option>
-        <option value="tor">ร่าง TOR</option>
+        <option value="quotation_support">ใบเสนอราคา (Support)</option>
+        <option value="tor_support">ร่าง TOR (Support)</option>
+        <option value="tor_dealer">ร่าง TOR (Dealer)</option>
         <option value="contract">เอกสารสัญญา</option>
         <option value="closing">เอกสารปิดงาน</option>
+        <option value="site_survey">เอกสาร Site Survey</option>
       </select>
     </div>
     <div style="background:#fff8e1;border-radius:10px;padding:12px 14px;font-size:13px;color:#7a5f00;line-height:1.6">
@@ -890,16 +1006,6 @@ function openRejectOverlay() {
 
 /* ─── Overlay confirm ─── */
 async function confirmOverlay() {
-  // Appointment: validate before closing
-  if (APPT_STATUSES.has(_pendingStatus)) {
-    const rawDate = document.getElementById("ov-appt-date")?.value;
-    if (!rawDate) { toast("กรุณาเลือกวันและเวลานัดหมาย"); return; }
-    closeOverlay();
-    const note = document.getElementById("ov-appt-note")?.value.trim() || "";
-    await doChangeStatus(_pendingProjectID, _pendingStatus, "", "", new Date(rawDate).toISOString(), note);
-    return;
-  }
-
   // Reject: validate before closing
   if (_pendingStatus === "reject") {
     const reason = document.getElementById("ov-reason")?.value.trim() || "";
@@ -909,17 +1015,12 @@ async function confirmOverlay() {
     return;
   }
 
-  // Open external browser for document upload (LINE Android blocks in-app file pickers)
+  // Ad-hoc upload: open external browser
   if (_pendingStatus === "__upload__") {
     const docType = document.getElementById("ov-doctype")?.value || "";
     if (!docType) { toast("กรุณาเลือกประเภทเอกสาร"); return; }
     closeOverlay();
-
-    const uploadURL = "https://vizzelintel.github.io/vizzel-sales-frontend/upload.html" +
-      "?project_id=" + encodeURIComponent(_pendingProjectID) +
-      "&token="      + encodeURIComponent(token) +
-      "&doc_type="   + encodeURIComponent(docType);
-    liff.openWindow({ url: uploadURL, external: true });
+    openDocUpload(_pendingProjectID, docType);
     return;
   }
 }
