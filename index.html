@@ -639,9 +639,10 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!event.data || event.data.type !== "UPLOAD_SUCCESS") return;
     if (!detailProjectID) return;
     fetchProjectDocs(detailProjectID).then(docs => {
+      currentDocs = docs;
       renderDocsSection(docs, detailProjectID);
       const p = projects.find(x => x.id === detailProjectID);
-      if (p) renderStatusSection(p, docs);
+      if (p) { renderStatusSection(p, docs); }  // retroPanel populated inside renderStatusSection
     });
   });
 
@@ -1080,7 +1081,22 @@ function renderStatusSection(p, docs) {
     ❌ Reject งานนี้
   </button>`;
 
+  // ── Retroactive doc panel (for tor / contract statuses) ────────────
+  if (["tor","contract"].includes(p.status)) {
+    html += `<div id="retroPanel" style="margin-top:12px">
+      <div onclick="toggleRetro()"
+        style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:white;border-radius:10px;border:1.5px solid #FF9500;cursor:pointer;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,.07)">
+        <span style="color:#FF9500;font-size:14px">📂 แนบเอกสารย้อนหลัง (ลบแล้วแนบใหม่)</span>
+        <span id="retroArrow" style="color:#FF9500;font-size:16px">›</span>
+      </div>
+      <div id="retroDocButtons" style="display:none;padding:0 2px"></div>
+    </div>`;
+  }
+
   el.innerHTML = html;
+
+  // Populate retroactive buttons after innerHTML is set
+  try { renderRetroactivePanel(p, docs); } catch(e) {}
 }
 
 /* ─── Action panel helpers ─── */
@@ -1100,6 +1116,58 @@ function openDocUpload(projectId, docType) {
     "&token="      + encodeURIComponent(token) +
     "&doc_type="   + encodeURIComponent(docType);
   liff.openWindow({ url, external: true });
+}
+
+/* ─── Retroactive document upload ─── */
+
+const RETRO_DOC_LABELS = {
+  quotation_support: "ใบเสนอราคา (Support)",
+  quotation_dealer:  "ใบเสนอราคา (Dealer)",
+  tor_support:       "ร่าง TOR (Support)",
+  tor_dealer:        "ร่าง TOR (Dealer)",
+};
+
+const RETRO_BY_STATUS = {
+  tor:      ["quotation_support", "quotation_dealer"],
+  contract: ["quotation_support", "quotation_dealer", "tor_support", "tor_dealer"],
+};
+
+function getRetroactiveDocs(project, docs) {
+  const available = RETRO_BY_STATUS[project?.status] || [];
+  const uploaded  = new Set((docs || []).map(d => d.doc_type));
+  return available.filter(dt => !uploaded.has(dt));
+}
+
+function renderRetroactivePanel(p, docs) {
+  const panel   = document.getElementById("retroPanel");
+  const buttons = document.getElementById("retroDocButtons");
+  if (!panel || !buttons) return;
+
+  const retroDocs = getRetroactiveDocs(p, docs);
+  if (retroDocs.length === 0) {
+    panel.style.display = "none";
+    return;
+  }
+  panel.style.display = "block";
+  buttons.innerHTML = retroDocs.map(dt => `
+    <button onclick="openRetroUpload('${dt}')"
+      style="width:100%;background:white;border:1.5px solid #FF9500;color:#FF9500;border-radius:10px;padding:12px 14px;margin-bottom:8px;font-size:14px;cursor:pointer;text-align:left;font-family:inherit">
+      📎 แนบ${esc(RETRO_DOC_LABELS[dt] || dt)}
+    </button>`).join("");
+}
+
+function toggleRetro() {
+  const btn   = document.getElementById("retroDocButtons");
+  const arrow = document.getElementById("retroArrow");
+  if (!btn) return;
+  const open = btn.style.display === "none";
+  btn.style.display   = open ? "block" : "none";
+  if (arrow) arrow.textContent = open ? "⌄" : "›";
+}
+
+function openRetroUpload(docType) {
+  if (!currentProject) return;
+  openDocUpload(currentProject.id, docType);
 }
 
 // Maps project status to the doc_type that should be uploaded next.
@@ -1568,9 +1636,10 @@ function copyInviteCode() {
 document.addEventListener("visibilitychange", () => {
   if (document.hidden || !detailProjectID) return;
   fetchProjectDocs(detailProjectID).then(docs => {
+    currentDocs = docs;
     renderDocsSection(docs, detailProjectID);
     const p = projects.find(x => x.id === detailProjectID);
-    if (p) renderStatusSection(p, docs);
+    if (p) renderStatusSection(p, docs);  // retroPanel populated inside renderStatusSection
   });
 });
 
