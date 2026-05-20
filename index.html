@@ -494,6 +494,13 @@ const APPT_STATUSES = new Set(["present","demo","site_survey"]);
 
 /* ─── Init ─── */
 async function init() {
+  // Clean up LINE OAuth callback params (?code= / ?state=) left in the URL
+  // after redirect, to prevent infinite loading loops.
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.has("code") || urlParams.has("state")) {
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+
   try {
     await liff.init({ liffId: LIFF_ID });
     if (!liff.isLoggedIn()) { liff.login({ scope: "profile openid email" }); return; }
@@ -1487,13 +1494,9 @@ function hideProfileOverlay() {
 }
 
 function logout() {
-  document.getElementById("profileDropdown").style.display = "none";
-  hideProfileOverlay();
-  token = "";
-  currentUser = null;
-  document.getElementById("app").style.display    = "none";
-  document.getElementById("splash").style.display = "flex";
-  try { liff.logout(); } catch(e) {}
+  localStorage.clear();
+  sessionStorage.clear();
+  window.location.href = "https://liff.line.me/" + LIFF_ID;
 }
 
 /* ─── Profile: ข้อมูลส่วนตัว ─── */
