@@ -341,6 +341,7 @@ let curTab   = "pipeline";
 let prevTab  = "pipeline";
 let detailProjectID = "";
 let currentProject  = null;
+let currentDocs     = [];
 
 async function fetchWithTimeout(url, options = {}, timeoutMs = 8000) {
   const controller = new AbortController();
@@ -776,6 +777,9 @@ function renderDocsSection(docs, projectID) {
   const el = document.getElementById("docsSection");
   if (!el) return;
 
+  currentDocs = docs;  // keep module-level copy for delete/upload helpers
+  const isClosed = currentProject?.status === "closed";
+
   const docTypeSet = new Set(docs.map(d => d.doc_type));
 
   // Sequential progress bar
@@ -794,27 +798,36 @@ function renderDocsSection(docs, projectID) {
     </div>${arrow}`;
   }).join("");
 
-  const allDocs = [...docs];
-
-  const docRows = allDocs.length
-    ? allDocs.map(d => `
+  const docRows = docs.length
+    ? docs.map(d => `
         <div class="doc-row">
           <div class="doc-icon">${fileIcon(d.file_name)}</div>
           <div class="doc-info">
             <div class="doc-type">${esc(DOC_NAMES[d.doc_type] || d.doc_type || "เอกสาร")}</div>
             <div class="doc-date">${esc(d.file_name || '')}${d.file_name && d.created_at ? ' · ' : ''}${fmtDate(d.created_at)}</div>
           </div>
-          <a class="doc-link" href="${esc(d.file_url)}" target="_blank">ดู ›</a>
+          <div style="display:flex;align-items:center;gap:8px">
+            <a class="doc-link" href="${esc(d.file_url)}" target="_blank">ดู ›</a>
+            ${!isClosed ? `<button onclick="deleteDocument('${esc(d.id)}')"
+              style="background:none;border:none;color:#FF3B30;font-size:18px;cursor:pointer;padding:0;line-height:1"
+              title="ลบเอกสาร">🗑</button>` : ""}
+          </div>
         </div>`).join("")
     : `<div style="border-top:1px solid #f2f2f7">${emptyH("📎","ยังไม่มีเอกสาร")}</div>`;
+
+  // Show "+" upload button only when there is a next required doc and project is not closed
+  const nextType  = getNextDocType(currentProject, docs);
+  const uploadBtn = nextType && !isClosed
+    ? `<button class="btn btn-green" style="margin-top:8px;font-size:14px"
+             onclick="openUploadOverlay('${esc(projectID)}')">+ แนบเอกสาร</button>`
+    : "";
 
   el.innerHTML = `
     <div class="dcard" style="overflow:hidden">
       <div class="doc-progress">${progressItems}</div>
       <div style="border-top:1px solid #f2f2f7">${docRows}</div>
     </div>
-    <button class="btn btn-green" style="margin-top:8px;font-size:14px"
-            onclick="openUploadOverlay('${esc(projectID)}')">+ แนบเอกสาร</button>`;
+    ${uploadBtn}`;
 }
 
 /* ─── Action panels (replaces old status buttons) ─── */
@@ -991,6 +1004,51 @@ function getDocTypeForStatus(status) {
   return map[status] || null;
 }
 
+// Returns the next doc_type that should be uploaded based on current status AND
+// what has already been uploaded. More precise than getDocTypeForStatus alone.
+function getNextDocType(project, docs) {
+  const status   = project?.status || "";
+  const uploaded = (docs || []).map(d => d.doc_type);
+  const has      = t => uploaded.includes(t);
+
+  if (["present","demo","site_survey"].includes(status)) {
+    return has("quotation_support") ? null : "quotation_support";
+  }
+  if (status === "quotation") {
+    if (!has("tor_support")) return "tor_support";
+    if (!has("tor_dealer"))  return "tor_dealer";
+    return null;
+  }
+  if (status === "tor")      return has("contract") ? null : "contract";
+  if (status === "contract") return has("closing")  ? null : "closing";
+  return null;
+}
+
+async function deleteDocument(docId) {
+  if (!confirm("ต้องการลบเอกสารนี้ใช่ไหม?")) return;
+  try {
+    const res = await fetchWithTimeout(`${API}/api/v1/documents/${docId}`, {
+      method:  "DELETE",
+      headers: { Authorization: "Bearer " + token },
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      toast(err.error || "ลบไม่สำเร็จ");
+      return;
+    }
+    toast("ลบเอกสารสำเร็จ ✓");
+    if (detailProjectID) {
+      const docs = await fetchProjectDocs(detailProjectID);
+      currentDocs = docs;
+      renderDocsSection(docs, detailProjectID);
+      const p = projects.find(x => x.id === detailProjectID);
+      if (p) renderStatusSection(p, docs);
+    }
+  } catch {
+    toast("ไม่สามารถเชื่อมต่อได้");
+  }
+}
+
 async function submitPresent(projectId) {
   const date = document.getElementById("ap-present-date")?.value;
   const type = document.getElementById("ap-present-type")?.value;
@@ -1090,13 +1148,13 @@ async function doChangeStatus(projectID, status, statusNote, rejectReason, appoi
   } catch { toast("เปลี่ยนสถานะไม่สำเร็จ"); }
 }
 
-/* ─── Overlay: document upload — auto-determines doc_type from project status ─── */
+/* ─── Overlay: document upload — uses getNextDocType for smart determination ─── */
 function openUploadOverlay(projectID) {
   const status  = currentProject?.status || "";
-  const docType = getDocTypeForStatus(status);
+  const docType = getNextDocType(currentProject, currentDocs);
 
   if (!docType) {
-    toast("ไม่สามารถแนบเอกสารในสถานะนี้ได้");
+    toast("แนบเอกสารครบแล้วสำหรับสถานะนี้");
     return;
   }
 
