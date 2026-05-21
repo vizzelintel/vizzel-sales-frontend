@@ -7,32 +7,47 @@
   <title>Vizzel Sales</title>
   <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
+    :root {
+      --vi-purple: #7B3FF2;
+      --vi-purple-dark: #5B21B6;
+      --vi-blue: #00A8E8;
+      --vi-blue-dark: #0284C7;
+      --vi-bg: #FFFFFF;
+      --vi-page: #F5F3FF;
+      --vi-text: #1E1B4B;
+      --vi-muted: #64748B;
+      --vi-border: #E2E8F0;
+      --vi-gradient: linear-gradient(135deg, #7B3FF2 0%, #00A8E8 100%);
+      --vi-shadow: 0 2px 12px rgba(91, 33, 182, 0.08);
+    }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f2f2f7; color: #1c1c1e; -webkit-tap-highlight-color: transparent; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--vi-bg); color: var(--vi-text); -webkit-tap-highlight-color: transparent; }
 
     /* ── Splash ── */
-    #splash { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 40px 20px; text-align: center; }
-    .splash-icon  { font-size: 60px; margin-bottom: 18px; }
-    .splash-title { font-size: 26px; font-weight: 700; margin-bottom: 6px; }
-    .splash-sub   { color: #8e8e93; font-size: 14px; margin-bottom: 28px; line-height: 1.5; }
-    .splash-spinner { width: 32px; height: 32px; border: 3px solid #e5e5ea; border-top-color: #06C755; border-radius: 50%; animation: spin 0.7s linear infinite; }
+    #splash { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 40px 20px; text-align: center; background: var(--vi-bg); }
+    .splash-logo-wrap { background: var(--vi-gradient); padding: 14px 18px; border-radius: 16px; margin-bottom: 18px; box-shadow: var(--vi-shadow); }
+    .splash-logo { height: 56px; width: auto; max-width: 220px; object-fit: contain; display: block; }
+    .splash-title { font-size: 24px; font-weight: 700; margin-bottom: 6px; color: var(--vi-purple-dark); }
+    .splash-sub   { color: var(--vi-muted); font-size: 14px; margin-bottom: 28px; line-height: 1.5; }
+    .splash-spinner { width: 32px; height: 32px; border: 3px solid var(--vi-border); border-top-color: var(--vi-purple); border-radius: 50%; animation: spin 0.7s linear infinite; }
     .splash-err   { color: #FF3B30; font-size: 13px; margin-top: 14px; line-height: 1.4; }
 
     /* ── App ── */
-    #app { display: none; flex-direction: column; height: 100vh; overflow: hidden; }
-    .hdr { background: #06C755; color: white; padding: 11px 16px; display: flex; align-items: center; gap: 10px; flex-shrink: 0; position: relative; }
-    .hdr img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: rgba(255,255,255,.25); }
+    #app { display: none; flex-direction: column; height: 100vh; overflow: hidden; background: var(--vi-page); }
+    .hdr { background: var(--vi-gradient); color: white; padding: 10px 14px; display: flex; align-items: center; gap: 10px; flex-shrink: 0; position: relative; box-shadow: 0 2px 8px rgba(91, 33, 182, 0.2); }
+    .hdr-logo { height: 36px; width: auto; max-width: 120px; object-fit: contain; flex-shrink: 0; }
+    .hdr #uPic { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: rgba(255,255,255,.25); border: 2px solid rgba(255,255,255,.4); }
     .hdr-info h1 { font-size: 15px; font-weight: 600; }
-    .hdr-info p  { font-size: 11px; opacity: .85; }
+    .hdr-info p  { font-size: 11px; opacity: .9; }
 
     /* ── Tabs ── */
-    .tabs { background: white; display: flex; border-bottom: 1px solid #e5e5ea; flex-shrink: 0; }
-    .tab  { flex: 1; padding: 9px 2px; text-align: center; font-size: 12px; color: #8e8e93; border: none; background: none; cursor: pointer; font-weight: 500; font-family: inherit; position: relative; }
-    .tab.on { color: #06C755; font-weight: 600; }
-    .tab.on::after { content: ''; position: absolute; bottom: 0; left: 15%; right: 15%; height: 2px; background: #06C755; border-radius: 2px 2px 0 0; }
+    .tabs { background: var(--vi-bg); display: flex; border-bottom: 1px solid var(--vi-border); flex-shrink: 0; }
+    .tab  { flex: 1; padding: 9px 2px; text-align: center; font-size: 12px; color: var(--vi-muted); border: none; background: none; cursor: pointer; font-weight: 500; font-family: inherit; position: relative; }
+    .tab.on { color: var(--vi-purple); font-weight: 600; }
+    .tab.on::after { content: ''; position: absolute; bottom: 0; left: 15%; right: 15%; height: 2px; background: var(--vi-gradient); border-radius: 2px 2px 0 0; }
 
     /* ── Content ── */
-    .content { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 14px; }
+    .content { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 14px; background: var(--vi-page); }
     .screen { display: none; }
     .screen.on { display: block; }
 
@@ -40,7 +55,7 @@
     .pipe-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 18px; }
     .pipe-card { background: white; border-radius: 10px; padding: 10px 6px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,.07); border-top: 3px solid; cursor: pointer; transition: transform .12s; }
     .pipe-card:active { transform: scale(.96); }
-    .pipe-card.ring-active { box-shadow: 0 0 0 2px #06C755; }
+    .pipe-card.ring-active { box-shadow: 0 0 0 2px var(--vi-purple); }
     .pipe-card .cnt  { font-size: 26px; font-weight: 700; line-height: 1; }
     .pipe-card .lbl  { font-size: 10px; color: #8e8e93; margin-top: 4px; line-height: 1.2; }
     /* color groups */
@@ -98,7 +113,7 @@
                          max-height: 200px; overflow-y: auto; z-index: 999;
                          box-shadow: 0 4px 12px rgba(0,0,0,.15); }
     .province-option  { padding: 10px 14px; cursor: pointer; font-size: 14px; color: #1c1c1e; }
-    .province-option:hover, .province-option.highlighted { background: #e4f9ec; }
+    .province-option:hover, .province-option.highlighted { background: #EDE9FE; color: var(--vi-purple-dark); }
 
     /* ── Detail ── */
     .dcard { background: white; border-radius: 12px; overflow: hidden; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.07); }
@@ -106,7 +121,7 @@
     .drow:last-child { border-bottom: none; }
     .dkey  { font-size: 13px; color: #8e8e93; width: 100px; flex-shrink: 0; }
     .dval  { flex: 1; font-size: 14px; word-break: break-word; }
-    .dval a { color: #007AFF; text-decoration: none; }
+    .dval a { color: var(--vi-blue-dark); text-decoration: none; }
 
     /* ── Document list ── */
     .doc-row { display: flex; align-items: center; padding: 10px 14px; border-bottom: 1px solid #f2f2f7; gap: 10px; }
@@ -115,7 +130,7 @@
     .doc-info { flex: 1; min-width: 0; }
     .doc-type { font-size: 13px; font-weight: 600; }
     .doc-date { font-size: 11px; color: #8e8e93; margin-top: 2px; }
-    .doc-link { color: #007AFF; font-size: 12px; flex-shrink: 0; }
+    .doc-link { color: var(--vi-blue-dark); font-size: 12px; flex-shrink: 0; }
 
     /* ── Status buttons ── */
     .sbtn-grid { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; }
@@ -144,8 +159,8 @@
     /* ── Buttons ── */
     .btn { display: block; width: 100%; padding: 14px; border: none; border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer; text-align: center; font-family: inherit; transition: opacity .15s; }
     .btn:active { opacity: .8; }
-    .btn-green { background: #06C755; color: white; }
-    .back-btn  { display: inline-flex; align-items: center; gap: 4px; color: #06C755; background: none; border: none; font-size: 15px; cursor: pointer; padding: 0; margin-bottom: 12px; font-weight: 500; font-family: inherit; }
+    .btn-green { background: var(--vi-gradient); color: white; box-shadow: 0 2px 8px rgba(123, 63, 242, 0.25); }
+    .back-btn  { display: inline-flex; align-items: center; gap: 4px; color: var(--vi-purple); background: none; border: none; font-size: 15px; cursor: pointer; padding: 0; margin-bottom: 12px; font-weight: 500; font-family: inherit; }
 
     /* ── Overlay ── */
     #overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 100; align-items: flex-end; }
@@ -156,17 +171,17 @@
     .ov-section { margin-bottom: 12px; }
     .ov-label { font-size: 12px; color: #8e8e93; margin-bottom: 4px; }
     .ov-input { width: 100%; border: 1.5px solid #e5e5ea; border-radius: 10px; padding: 11px 12px; font-size: 15px; font-family: inherit; outline: none; }
-    .ov-input:focus { border-color: #06C755; }
+    .ov-input:focus { border-color: var(--vi-purple); }
     textarea.ov-input { resize: none; height: 90px; }
     /* File pick: input overlaid on button so LINE WebView can trigger it */
     .file-pick-wrap { position: relative; width: 100%; }
     .file-pick-btn  { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 15px; border: 1.5px dashed #c7c7cc; border-radius: 10px; background: white; font-size: 15px; font-family: inherit; cursor: pointer; color: #636366; }
-    .file-pick-btn.has-file { border-color: #06C755; background: #f0fdf4; color: #06C755; }
+    .file-pick-btn.has-file { border-color: var(--vi-purple); background: #EDE9FE; color: var(--vi-purple-dark); }
     .file-pick-inp  { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; font-size: 0; } /* font-size:0 hides iOS label */
-    .file-pick-name { margin-top: 8px; font-size: 13px; color: #06C755; font-weight: 600; word-break: break-all; }
+    .file-pick-name { margin-top: 8px; font-size: 13px; color: var(--vi-purple); font-weight: 600; word-break: break-all; }
     .ov-btn-row { display: flex; gap: 10px; margin-top: 16px; }
     .ov-btn     { flex: 1; padding: 13px; border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit; border: none; }
-    .ov-btn-primary { background: #06C755; color: white; }
+    .ov-btn-primary { background: var(--vi-gradient); color: white; }
     .ov-btn-cancel  { background: #f2f2f7; color: #3c3c43; }
 
     /* ── Action panel label ── */
@@ -174,7 +189,7 @@
 
     /* ── Misc ── */
     .spin-wrap { display: flex; justify-content: center; padding: 36px 0; }
-    .spinner   { width: 28px; height: 28px; border: 3px solid #e5e5ea; border-top-color: #06C755; border-radius: 50%; animation: spin .7s linear infinite; }
+    .spinner   { width: 28px; height: 28px; border: 3px solid var(--vi-border); border-top-color: var(--vi-purple); border-radius: 50%; animation: spin .7s linear infinite; }
     .btn-spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.35); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; vertical-align: -2px; margin-right: 4px; }
     .btn.is-loading { opacity: .75; pointer-events: none; }
     .proj-pagination { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 16px 0 8px; font-size: 13px; color: #636366; }
@@ -192,22 +207,24 @@
 
 <!-- ── Splash ── -->
 <div id="splash">
-  <div class="splash-icon">📊</div>
+  <div class="splash-logo-wrap">
+    <img src="assets/logo.png" alt="Vizzel Intel Access" class="splash-logo">
+  </div>
   <h2 class="splash-title">Vizzel Sales</h2>
   <p class="splash-sub">ระบบจัดการลูกค้า<br>หน่วยงานราชการ</p>
   <div class="splash-spinner" id="splashSpinner"></div>
   <p id="splashStatus" style="font-size:13px;color:#8e8e93;margin-top:12px">กำลังโหลด...</p>
-  <p id="splashVersion" style="font-size:11px;color:#c7c7cc;margin-top:6px">v20260521g</p>
+  <p id="splashVersion" style="font-size:11px;color:#94a3b8;margin-top:6px">v20260521h</p>
   <p id="splashErr" class="splash-err" style="display:none"></p>
-  <button id="splashRetry" type="button" style="display:none;margin-top:14px;background:#06C755;color:white;border:none;padding:12px 28px;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit"
+  <button id="splashRetry" type="button" style="display:none;margin-top:14px;background:linear-gradient(135deg,#7B3FF2,#00A8E8);color:white;border:none;padding:12px 28px;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit"
     onclick="localStorage.removeItem('vizzel_token');try{liff.logout();}catch(e){}window.location.reload();">ลองใหม่</button>
 </div>
 
 <!-- ── Register ── -->
-<div id="register" style="display:none;min-height:100vh;background:#f2f2f7;padding:24px 16px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+<div id="register" style="display:none;min-height:100vh;background:#FFFFFF;padding:24px 16px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
   <div style="max-width:480px;margin:0 auto">
     <div style="text-align:center;margin-bottom:28px">
-      <div style="font-size:48px;margin-bottom:10px">📋</div>
+      <img src="assets/logo.png" alt="Vizzel Intel Access" style="height:48px;width:auto;max-width:200px;margin-bottom:12px">
       <div style="font-size:22px;font-weight:700;margin-bottom:6px">ลงทะเบียนใช้งาน</div>
       <div style="font-size:13px;color:#8e8e93">กรอกข้อมูลเพื่อเริ่มต้นใช้งาน Vizzel Sales</div>
     </div>
@@ -253,7 +270,7 @@
       </div>
       <div id="regError" style="color:#FF3B30;font-size:13px;margin-bottom:14px;display:none"></div>
       <button id="regSubmitBtn" onclick="submitRegister()"
-        style="width:100%;background:#06C755;color:white;border:none;padding:14px;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit">
+        style="width:100%;background:linear-gradient(135deg,#7B3FF2,#00A8E8);color:white;border:none;padding:14px;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit">
         ลงทะเบียน
       </button>
     </div>
@@ -261,7 +278,7 @@
 </div>
 
 <!-- ── Email Verification Gate ── -->
-<div id="emailVerify" style="display:none;min-height:100vh;background:#f2f2f7;padding:24px 16px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+<div id="emailVerify" style="display:none;min-height:100vh;background:#FFFFFF;padding:24px 16px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
   <div style="max-width:480px;margin:0 auto">
     <div style="text-align:center;margin-bottom:24px">
       <div style="font-size:48px;margin-bottom:10px">📧</div>
@@ -275,7 +292,7 @@
           style="width:100%;padding:11px 12px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;outline:none;box-sizing:border-box">
       </div>
       <button id="verifySendBtn" onclick="sendVerifyOTP()"
-        style="width:100%;background:#06C755;color:white;border:none;padding:12px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:10px">
+        style="width:100%;background:linear-gradient(135deg,#7B3FF2,#00A8E8);color:white;border:none;padding:12px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:10px">
         ส่งรหัส OTP
       </button>
       <div style="margin-bottom:12px">
@@ -284,7 +301,7 @@
           style="width:100%;padding:11px 12px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;outline:none;box-sizing:border-box;letter-spacing:3px">
       </div>
       <button id="verifyConfirmBtn" onclick="confirmVerifyOTP()"
-        style="width:100%;background:#007AFF;color:white;border:none;padding:12px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">
+        style="width:100%;background:#5B21B6;color:white;border:none;padding:12px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">
         ยืนยันอีเมล
       </button>
       <div id="verifyHint" style="margin-top:10px;font-size:12px;color:#8e8e93;line-height:1.4"></div>
@@ -296,6 +313,7 @@
 <!-- ── App ── -->
 <div id="app">
   <div class="hdr">
+    <img src="assets/logo.png" alt="Vizzel" class="hdr-logo">
     <div id="profileArea" style="display:flex;align-items:center;gap:10px;cursor:pointer;flex:1">
       <img id="uPic" src="" alt="" style="width:32px;height:32px;border-radius:50%;object-fit:cover;background:rgba(255,255,255,.25)">
       <div class="hdr-info">
@@ -375,7 +393,7 @@
         <input type="text" id="searchInput" placeholder="ค้นหาชื่อหน่วยงาน..."
           style="flex:1;padding:10px 14px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;outline:none;">
         <button onclick="openCreateModal()"
-          style="background:#06C755;color:white;border:none;padding:10px 16px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit">
+          style="background:#7B3FF2;color:white;border:none;padding:10px 16px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit">
           + สร้าง
         </button>
       </div>
@@ -428,9 +446,9 @@
 <div class="toast" id="toast"></div>
 
 <!-- ── Profile overlay (full-screen, z-index above everything) ── -->
-<div id="profileOverlay" style="display:none;position:fixed;inset:0;z-index:500;background:#f2f2f7;overflow-y:auto">
+<div id="profileOverlay" style="display:none;position:fixed;inset:0;z-index:500;background:#F5F3FF;overflow-y:auto">
   <!-- Sticky header with back button -->
-  <div style="background:#06C755;color:white;padding:11px 16px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:1">
+  <div style="background:#7B3FF2;color:white;padding:11px 16px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:1">
     <button onclick="profileBack()" style="background:none;border:none;color:white;font-size:22px;cursor:pointer;padding:0;line-height:1">‹</button>
     <h2 id="profileOverlayTitle" style="font-size:16px;font-weight:600;margin:0">ข้อมูลส่วนตัว</h2>
   </div>
@@ -476,7 +494,7 @@
           เปลี่ยนอีเมลต้องยืนยัน OTP ก่อนกดบันทึก
         </div>
         <button id="profileSendOtpBtn" type="button" onclick="profileSendOTP()"
-          style="width:100%;background:#06C755;color:white;border:none;padding:11px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:10px">
+          style="width:100%;background:#7B3FF2;color:white;border:none;padding:11px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:10px">
           ส่งรหัส OTP
         </button>
         <label style="font-size:13px;color:#636366;font-weight:600;display:block;margin-bottom:6px">OTP 6 หลัก</label>
@@ -515,7 +533,7 @@
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
       <div style="font-weight:700;font-size:16px">บริษัท Dealer</div>
       <button id="btnCreateCompany" onclick="openCreateCompanyModal()"
-        style="background:#06C755;color:white;border:none;padding:10px 18px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">
+        style="background:#7B3FF2;color:white;border:none;padding:10px 18px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">
         + เพิ่มบริษัท
       </button>
     </div>
@@ -578,7 +596,7 @@
     </div>
     <div id="createCompanyError" style="color:#FF3B30;margin-bottom:12px;display:none;font-size:13px"></div>
     <button onclick="submitCreateCompany()"
-      style="width:100%;background:#06C755;color:white;border:none;padding:14px;border-radius:12px;font-size:16px;font-weight:600;cursor:pointer;font-family:inherit">
+      style="width:100%;background:#7B3FF2;color:white;border:none;padding:14px;border-radius:12px;font-size:16px;font-weight:600;cursor:pointer;font-family:inherit">
       สร้างบริษัท
     </button>
   </div>
@@ -639,18 +657,18 @@
       </div>
       <div id="createError" style="color:#FF3B30;margin-bottom:12px;display:none;font-size:13px;line-height:1.5"></div>
       <button type="submit" id="createSubmitBtn"
-        style="width:100%;background:#06C755;color:white;border:none;padding:14px;border-radius:12px;font-size:16px;font-weight:600;cursor:pointer;font-family:inherit">
+        style="width:100%;background:#7B3FF2;color:white;border:none;padding:14px;border-radius:12px;font-size:16px;font-weight:600;cursor:pointer;font-family:inherit">
         สร้างโครงการ
       </button>
     </form>
   </div>
 </div>
 
-<script>/* build 20260521g */
+<script>/* build 20260521h */
 const FRONTEND_BASE_URL = "https://vizzelintel.github.io/vizzel-sales-frontend/";
 const LIFF_ID           = "2010133685-tke1EWht";
 const LIFF_OPEN_URL     = "https://liff.line.me/" + LIFF_ID;
-const APP_BOOT_VERSION  = "20260521g";
+const APP_BOOT_VERSION  = "20260521h";
 const API               = "https://vizzel-sales-api.fly.dev";
 const API_BASE          = API + "/api/v1";
 
@@ -729,7 +747,7 @@ function showSplashError(msg) {
     retry.id = "splashRetry";
     retry.type = "button";
     retry.textContent = "ลองใหม่";
-    retry.style.cssText = "margin-top:14px;background:#06C755;color:white;border:none;padding:12px 28px;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit";
+    retry.style.cssText = "margin-top:14px;background:#7B3FF2;color:white;border:none;padding:12px 28px;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit";
     retry.onclick = () => { localStorage.removeItem("vizzel_token"); try { liff.logout(); } catch(e) {} window.location.reload(); };
     splash.appendChild(retry);
   }
@@ -744,7 +762,7 @@ function showOpenInLineButton() {
     btn.id = "splashOpenLine";
     btn.href = LIFF_OPEN_URL;
     btn.textContent = "เปิดในแอป LINE";
-    btn.style.cssText = "display:inline-block;margin-top:10px;background:#06C755;color:white;padding:12px 28px;border-radius:10px;font-size:15px;font-weight:600;text-decoration:none;font-family:inherit";
+    btn.style.cssText = "display:inline-block;margin-top:10px;background:#7B3FF2;color:white;padding:12px 28px;border-radius:10px;font-size:15px;font-weight:600;text-decoration:none;font-family:inherit";
     splash.appendChild(btn);
   }
   if (btn) btn.style.display = "inline-block";
@@ -2068,7 +2086,7 @@ function buildDetailInfo(p) {
         <button type="button" onclick="cancelInfoEdit()"
           style="border:1px solid #c7c7cc;background:white;border-radius:6px;padding:8px 16px;cursor:pointer;color:#636366;font-family:inherit;font-size:14px">ยกเลิก</button>
         <button type="button" onclick="saveProjectInfo()"
-          style="background:#06C755;border:none;border-radius:6px;padding:8px 16px;color:white;font-weight:700;cursor:pointer;font-family:inherit;font-size:14px">บันทึก</button>
+          style="background:#7B3FF2;border:none;border-radius:6px;padding:8px 16px;color:white;font-weight:700;cursor:pointer;font-family:inherit;font-size:14px">บันทึก</button>
       </div>
     </div>
   </div>` + buildAppointmentsSection(p);
@@ -2247,7 +2265,7 @@ function buildNoteSection(p) {
             ยกเลิก
           </button>
           <button onclick="saveNote()"
-            style="background:#06C755;border:none;border-radius:6px;padding:6px 16px;color:white;font-weight:700;cursor:pointer;font-family:inherit;font-size:14px">
+            style="background:#7B3FF2;border:none;border-radius:6px;padding:6px 16px;color:white;font-weight:700;cursor:pointer;font-family:inherit;font-size:14px">
             บันทึก
           </button>
         </div>
