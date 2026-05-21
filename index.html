@@ -437,8 +437,9 @@
 </div>
 
 <script>
-const LIFF_ID = "2010133685-tke1EWht";
-const API     = "https://vizzel-sales-api.fly.dev";
+const LIFF_ID  = "2010133685-tke1EWht";
+const API      = "https://vizzel-sales-api.fly.dev";
+const API_BASE = API + "/api/v1";
 
 let token    = "";
 let projects = [];
@@ -493,55 +494,96 @@ const DOC_TYPES_SEQ = ["quotation_support","tor_support","contract","closing"];
 const APPT_STATUSES = new Set(["present","demo","site_survey"]);
 
 /* ─── Init ─── */
-async function init() {
-  // Clean up LINE OAuth callback params (?code= / ?state=) left in the URL
-  // after redirect, to prevent infinite loading loops.
-  const urlParams = new URLSearchParams(window.location.search);
-  if (urlParams.has("code") || urlParams.has("state")) {
+async function initLiff() {
+  // 1. Init LIFF SDK
+  try {
+    await liff.init({ liffId: LIFF_ID, withLoginOnExternalBrowser: true });
+  } catch(err) {
+    document.body.innerHTML = `<p style="padding:24px;text-align:center;font-family:sans-serif">เกิดข้อผิดพลาด กรุณาเปิดผ่าน LINE<br><small style="color:#999">${err.message}</small></p>`;
+    return;
+  }
+
+  // 2. Strip LINE OAuth callback params from URL (prevents re-init loops)
+  if (window.location.search) {
     window.history.replaceState({}, document.title, window.location.pathname);
   }
 
+  // 3. If not logged into LINE, redirect to login
+  if (!liff.isLoggedIn()) {
+    liff.login({ redirectUri: "https://vizzelintel.github.io/vizzel-sales-frontend/" });
+    return;
+  }
+
+  // 4. Try cached token first (avoid unnecessary re-auth)
+  const savedToken = localStorage.getItem("vizzel_token");
+  if (savedToken) {
+    token = savedToken;
+    const ok = await loadCurrentUser();
+    if (ok) { initApp(); return; }
+    // Token expired or invalid — fall through to re-auth
+    localStorage.removeItem("vizzel_token");
+    token = "";
+  }
+
+  // 5. Exchange LINE access token for backend JWT
   try {
-    await liff.init({ liffId: LIFF_ID });
-    if (!liff.isLoggedIn()) { liff.login({ scope: "profile openid email" }); return; }
-    await loginWithLine();
-  } catch(e) {
-    const el = document.createElement("p");
-    el.className = "splash-err";
-    el.textContent = "เกิดข้อผิดพลาด: " + e.message;
-    document.getElementById("splash").appendChild(el);
+    const lineToken = liff.getAccessToken();
+    const email     = liff.getDecodedIDToken()?.email || "";
+
+    const authRes = await fetchWithTimeout(`${API_BASE}/auth/line`, {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ access_token: lineToken, email }),
+    }, 10000);
+
+    if (!authRes.ok) throw new Error("auth failed " + authRes.status);
+    const authData = await authRes.json();
+    token = authData.token;
+    localStorage.setItem("vizzel_token", token);
+
+    const ok = await loadCurrentUser();
+    if (!ok) throw new Error("load user failed");
+    initApp();
+
+  } catch(err) {
+    document.body.innerHTML = `
+      <div style="padding:40px;text-align:center;font-family:sans-serif">
+        <p style="font-size:16px;margin-bottom:8px">เข้าสู่ระบบไม่สำเร็จ</p>
+        <p style="font-size:12px;color:#999;margin-bottom:20px">${err.message}</p>
+        <button onclick="localStorage.clear();try{liff.logout();}catch(e){}window.location.reload();"
+          style="background:#06C755;color:white;border:none;padding:12px 28px;border-radius:10px;font-size:15px;cursor:pointer">
+          ลองใหม่
+        </button>
+      </div>`;
   }
 }
 
-async function loginWithLine() {
-  const accessToken = liff.getAccessToken();
-  const profile     = await liff.getProfile();
-  // Email from OIDC ID token — present only when "email" scope is granted on the LINE channel
-  const email = liff.getDecodedIDToken()?.email || "";
-
-  document.getElementById("uName").textContent = profile.displayName;
-  document.getElementById("uPic").src          = profile.pictureUrl || "";
-
-  const res = await fetchWithTimeout(API + "/api/v1/auth/line", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ access_token: accessToken, email }),
-  });
-  if (!res.ok) throw new Error("auth failed " + res.status);
-  token = (await res.json()).token;
-
-  // Load full user profile and populate dropdown
+// Fetch /me and populate currentUser. Returns true on success.
+async function loadCurrentUser() {
   try {
-    const meRes = await fetchWithTimeout(API + "/api/v1/me", {
+    const res = await fetchWithTimeout(`${API_BASE}/me`, {
       headers: { Authorization: "Bearer " + token },
-    });
-    if (meRes.ok) {
-      currentUser = await meRes.json();
-      document.getElementById("dropdownName").textContent    = currentUser.full_name || currentUser.first_name || profile.displayName;
-      document.getElementById("dropdownRole").textContent    = currentUser.role || "";
-      document.getElementById("dropdownCompany").textContent = currentUser.company_name || "";
-      applyRoleMenuVisibility(currentUser.role || "");
-    }
+    }, 8000);
+    if (!res.ok) return false;
+    currentUser = await res.json();
+    return true;
+  } catch(e) {
+    return false;
+  }
+}
+
+// Show the app after successful auth + user load.
+function initApp() {
+  if (currentUser) {
+    document.getElementById("uName").textContent          = currentUser.full_name || currentUser.first_name || "...";
+    document.getElementById("dropdownName").textContent    = currentUser.full_name || currentUser.first_name || "...";
+    document.getElementById("dropdownRole").textContent    = currentUser.role       || "";
+    document.getElementById("dropdownCompany").textContent = currentUser.company_name || "";
+    applyRoleMenuVisibility(currentUser.role || "");
+  }
+  // Best-effort: fetch LINE profile picture
+  try {
+    liff.getProfile().then(p => { document.getElementById("uPic").src = p.pictureUrl || ""; }).catch(() => {});
   } catch(e) {}
 
   document.getElementById("splash").style.display = "none";
@@ -1496,8 +1538,9 @@ function hideProfileOverlay() {
 function logout() {
   localStorage.clear();
   sessionStorage.clear();
-  try { liff.logout(); } catch(e) {}
-  // Redirect to app root — LIFF will trigger LINE login screen on next init
+  token       = null;
+  currentUser = null;
+  if (liff.isLoggedIn()) { try { liff.logout(); } catch(e) {} }
   window.location.replace("https://vizzelintel.github.io/vizzel-sales-frontend/");
 }
 
@@ -1648,7 +1691,7 @@ document.addEventListener("visibilitychange", () => {
   });
 });
 
-init();
+initLiff();
 </script>
 </body>
 </html>
