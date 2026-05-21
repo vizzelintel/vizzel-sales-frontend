@@ -640,9 +640,7 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 8000) {
 /* ─── Status metadata ─── */
 const STATUS = {
   register:    { label: "Register",        short: "Register",   group: "gray"   },
-  present:     { label: "นัดหมาย Present", short: "Present",    group: "blue"   },
-  demo:        { label: "นัดหมาย Demo",    short: "Demo",       group: "blue"   },
-  site_survey: { label: "Site Survey",     short: "Survey",     group: "blue"   },
+  present:     { label: "พรีเซ็น",         short: "Present",    group: "blue"   },
   quotation:   { label: "ส่งใบเสนอราคา",  short: "Quotation",  group: "orange" },
   tor:         { label: "ส่งร่าง TOR",     short: "TOR",        group: "orange" },
   contract:    { label: "สัญญาแล้ว",       short: "Contract",   group: "green"  },
@@ -665,7 +663,7 @@ const DOC_NAMES = {
 const DOC_TYPES_SEQ = ["quotation_support","tor_support","contract","closing"];
 
 /* Statuses that trigger a Google Calendar appointment */
-const APPT_STATUSES = new Set(["present","demo","site_survey"]);
+const APPT_STATUSES = new Set(["present"]);
 
 /* ─── Province search component ─── */
 const ALL_PROVINCES = [
@@ -1856,7 +1854,7 @@ function renderStatusSection(p, docs) {
     // ── Primary document upload panel ────────────────────────────────
     const s = p.status;
     let primaryHtml = "";
-    if (s === "present" || s === "demo" || s === "site_survey") {
+    if (s === "present") {
       primaryHtml = `<div class="dcard" style="padding:16px;margin-bottom:12px">
         <div style="font-weight:700;font-size:15px;margin-bottom:6px">📋 แนบใบเสนอราคา</div>
         <div style="font-size:12px;color:#8e8e93;margin-bottom:12px">อัปโหลดเพื่อเปลี่ยนสถานะเป็น Quotation</div>
@@ -2035,12 +2033,10 @@ function openRetroUpload(docType) {
 // Returns null for statuses where ad-hoc upload is not applicable.
 function getDocTypeForStatus(status) {
   const map = {
-    present:     "quotation_support",
-    demo:        "quotation_support",
-    site_survey: "site_survey",
-    quotation:   "tor_support",   // special: 2 options handled in openUploadOverlay
-    tor:         "contract",
-    contract:    "closing",
+    present:   "quotation_support",
+    quotation: "tor_support",
+    tor:       "contract",
+    contract:  "closing",
   };
   return map[status] || null;
 }
@@ -2052,7 +2048,7 @@ function getNextDocType(project, docs) {
   const uploaded = (docs || []).map(d => d.doc_type);
   const has      = t => uploaded.includes(t);
 
-  if (["present","demo","site_survey"].includes(status)) {
+  if (status === "present") {
     return has("quotation_support") ? null : "quotation_support";
   }
   if (status === "quotation") {
