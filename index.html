@@ -1587,7 +1587,8 @@ function buildAppointmentsSection(p) {
   return `<div class="dcard" style="margin-bottom:12px;padding:16px">
     <div style="font-weight:700;font-size:14px;margin-bottom:4px">📅 กำหนดการนัดหมาย</div>
     <div style="font-size:12px;color:#8e8e93;margin-bottom:10px;line-height:1.4">
-      พรีเซ็นครั้งแรกเมื่อลงทะเบียน · Demo/Site Survey นัดเพิ่มได้ภายหลัง (ไม่เปลี่ยนสถานะงาน)
+      พรีเซ็นครั้งแรกเมื่อลงทะเบียน · Demo/Site Survey นัดเพิ่มเมื่อไหร่ก็ได้หลังพรีเซ็น
+      (หลังเสนอราคา / TOR / สัญญา — โปรเจกต customize มักนัด Demo หลังออกสัญญา) ไม่เปลี่ยนสถานะงาน
     </div>
     ${rows}
   </div>`;
@@ -1889,7 +1890,7 @@ function renderStatusSection(p, docs) {
           style="width:100%;padding:14px 16px;background:none;border:none;text-align:left;font-size:14px;font-weight:600;cursor:pointer;color:#007AFF;font-family:inherit;display:flex;align-items:center;gap:8px">
           <span id="demo-arrow">›</span> + นัดวัน Demo (ไม่บังคับ)
         </button>
-        <div style="padding:0 16px 8px;font-size:12px;color:#8e8e93">นัดได้หลังพรีเซ็นแล้ว ไม่เปลี่ยนสถานะงาน (เช่นหลังเสนอราคา/TOR/สัญญา)</div>
+        <div style="padding:0 16px 8px;font-size:12px;color:#8e8e93">นัดได้ทุกขั้นหลังพรีเซ็น (รวมหลังเซ็นสัญญา — customize app) ไม่เปลี่ยนสถานะงาน</div>
         <div id="demo-panel" style="display:none;padding:0 16px 16px">
           <div style="margin-bottom:10px">
             <div class="ap-lbl">วันและเวลา *</div>
@@ -1912,7 +1913,7 @@ function renderStatusSection(p, docs) {
           style="width:100%;padding:14px 16px;background:none;border:none;text-align:left;font-size:14px;font-weight:600;cursor:pointer;color:#007AFF;font-family:inherit;display:flex;align-items:center;gap:8px">
           <span id="survey-arrow">›</span> + นัดวัน Site Survey (ไม่บังคับ)
         </button>
-        <div style="padding:0 16px 8px;font-size:12px;color:#8e8e93">นัดได้หลังพรีเซ็นแล้ว ไม่เปลี่ยนสถานะงาน</div>
+        <div style="padding:0 16px 8px;font-size:12px;color:#8e8e93">นัดได้ทุกขั้นหลังพรีเซ็น (รวมหลังสัญญา) ไม่เปลี่ยนสถานะงาน</div>
         <div id="survey-panel" style="display:none;padding:0 16px 16px">
           <div style="margin-bottom:10px">
             <div class="ap-lbl">วันและเวลา *</div>
