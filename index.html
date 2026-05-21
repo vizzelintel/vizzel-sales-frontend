@@ -25,8 +25,8 @@
 
     /* ── Splash ── */
     #splash { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 40px 20px; text-align: center; background: var(--vi-bg); }
-    .splash-logo-wrap { background: var(--vi-gradient); padding: 14px 18px; border-radius: 16px; margin-bottom: 18px; box-shadow: var(--vi-shadow); }
-    .splash-logo { height: 56px; width: auto; max-width: 220px; object-fit: contain; display: block; }
+    .splash-logo-wrap { background: transparent; padding: 0; margin-bottom: 18px; }
+    .splash-logo { height: 72px; width: auto; max-width: 260px; object-fit: contain; display: block; }
     .splash-title { font-size: 24px; font-weight: 700; margin-bottom: 6px; color: var(--vi-purple-dark); }
     .splash-sub   { color: var(--vi-muted); font-size: 14px; margin-bottom: 28px; line-height: 1.5; }
     .splash-spinner { width: 32px; height: 32px; border: 3px solid var(--vi-border); border-top-color: var(--vi-purple); border-radius: 50%; animation: spin 0.7s linear infinite; }
@@ -35,7 +35,8 @@
     /* ── App ── */
     #app { display: none; flex-direction: column; height: 100vh; overflow: hidden; background: var(--vi-page); }
     .hdr { background: var(--vi-gradient); color: white; padding: 10px 14px; display: flex; align-items: center; gap: 10px; flex-shrink: 0; position: relative; box-shadow: 0 2px 8px rgba(91, 33, 182, 0.2); }
-    .hdr-logo { height: 36px; width: auto; max-width: 120px; object-fit: contain; flex-shrink: 0; }
+    .hdr-logo-wrap { background: #FFFFFF; padding: 4px 8px; border-radius: 8px; flex-shrink: 0; display: flex; align-items: center; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+    .hdr-logo { height: 32px; width: auto; max-width: 110px; object-fit: contain; display: block; }
     .hdr #uPic { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: rgba(255,255,255,.25); border: 2px solid rgba(255,255,255,.4); }
     .hdr-info h1 { font-size: 15px; font-weight: 600; }
     .hdr-info p  { font-size: 11px; opacity: .9; }
@@ -214,7 +215,7 @@
   <p class="splash-sub">ระบบจัดการลูกค้า<br>หน่วยงานราชการ</p>
   <div class="splash-spinner" id="splashSpinner"></div>
   <p id="splashStatus" style="font-size:13px;color:#8e8e93;margin-top:12px">กำลังโหลด...</p>
-  <p id="splashVersion" style="font-size:11px;color:#94a3b8;margin-top:6px">v20260521h</p>
+  <p id="splashVersion" style="font-size:11px;color:#94a3b8;margin-top:6px">v20260521i</p>
   <p id="splashErr" class="splash-err" style="display:none"></p>
   <button id="splashRetry" type="button" style="display:none;margin-top:14px;background:linear-gradient(135deg,#7B3FF2,#00A8E8);color:white;border:none;padding:12px 28px;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit"
     onclick="localStorage.removeItem('vizzel_token');try{liff.logout();}catch(e){}window.location.reload();">ลองใหม่</button>
@@ -224,7 +225,7 @@
 <div id="register" style="display:none;min-height:100vh;background:#FFFFFF;padding:24px 16px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
   <div style="max-width:480px;margin:0 auto">
     <div style="text-align:center;margin-bottom:28px">
-      <img src="assets/logo.png" alt="Vizzel Intel Access" style="height:48px;width:auto;max-width:200px;margin-bottom:12px">
+      <div class="hdr-logo-wrap" style="display:inline-flex;margin-bottom:12px"><img src="assets/logo.png" alt="Vizzel Intel Access" class="hdr-logo" style="height:44px;max-width:200px"></div>
       <div style="font-size:22px;font-weight:700;margin-bottom:6px">ลงทะเบียนใช้งาน</div>
       <div style="font-size:13px;color:#8e8e93">กรอกข้อมูลเพื่อเริ่มต้นใช้งาน Vizzel Sales</div>
     </div>
@@ -313,7 +314,7 @@
 <!-- ── App ── -->
 <div id="app">
   <div class="hdr">
-    <img src="assets/logo.png" alt="Vizzel" class="hdr-logo">
+    <div class="hdr-logo-wrap"><img src="assets/logo.png" alt="Vizzel" class="hdr-logo"></div>
     <div id="profileArea" style="display:flex;align-items:center;gap:10px;cursor:pointer;flex:1">
       <img id="uPic" src="" alt="" style="width:32px;height:32px;border-radius:50%;object-fit:cover;background:rgba(255,255,255,.25)">
       <div class="hdr-info">
@@ -664,11 +665,11 @@
   </div>
 </div>
 
-<script>/* build 20260521h */
+<script>/* build 20260521i */
 const FRONTEND_BASE_URL = "https://vizzelintel.github.io/vizzel-sales-frontend/";
 const LIFF_ID           = "2010133685-tke1EWht";
 const LIFF_OPEN_URL     = "https://liff.line.me/" + LIFF_ID;
-const APP_BOOT_VERSION  = "20260521h";
+const APP_BOOT_VERSION  = "20260521i";
 const API               = "https://vizzel-sales-api.fly.dev";
 const API_BASE          = API + "/api/v1";
 
