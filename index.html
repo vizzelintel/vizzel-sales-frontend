@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <title>Vizzel Sales</title>
   <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
@@ -618,6 +619,8 @@
 <script>
 const FRONTEND_BASE_URL = "https://vizzelintel.github.io/vizzel-sales-frontend/";
 const LIFF_ID           = "2010133685-tke1EWht";
+const LIFF_OPEN_URL     = "https://liff.line.me/" + LIFF_ID;
+const APP_BOOT_VERSION  = "20260521b";
 const API               = "https://vizzel-sales-api.fly.dev";
 const API_BASE          = API + "/api/v1";
 
@@ -671,12 +674,46 @@ function setSplashStatus(msg) {
 
 function showSplashError(msg) {
   const spin = document.getElementById("splashSpinner");
-  const err  = document.getElementById("splashErr");
-  const retry = document.getElementById("splashRetry");
+  let err  = document.getElementById("splashErr");
+  let retry = document.getElementById("splashRetry");
+  const splash = document.getElementById("splash");
   if (spin) spin.style.display = "none";
   setSplashStatus("");
+  if (!err && splash) {
+    err = document.createElement("p");
+    err.id = "splashErr";
+    err.className = "splash-err";
+    splash.appendChild(err);
+  }
   if (err) { err.textContent = msg; err.style.display = "block"; }
+  if (!retry && splash) {
+    retry = document.createElement("button");
+    retry.id = "splashRetry";
+    retry.type = "button";
+    retry.textContent = "ลองใหม่";
+    retry.style.cssText = "margin-top:14px;background:#06C755;color:white;border:none;padding:12px 28px;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit";
+    retry.onclick = () => { localStorage.removeItem("vizzel_token"); try { liff.logout(); } catch(e) {} window.location.reload(); };
+    splash.appendChild(retry);
+  }
   if (retry) retry.style.display = "inline-block";
+}
+
+function showOpenInLineButton() {
+  let btn = document.getElementById("splashOpenLine");
+  const splash = document.getElementById("splash");
+  if (!btn && splash) {
+    btn = document.createElement("a");
+    btn.id = "splashOpenLine";
+    btn.href = LIFF_OPEN_URL;
+    btn.textContent = "เปิดในแอป LINE";
+    btn.style.cssText = "display:inline-block;margin-top:10px;background:#06C755;color:white;padding:12px 28px;border-radius:10px;font-size:15px;font-weight:600;text-decoration:none;font-family:inherit";
+    splash.appendChild(btn);
+  }
+  if (btn) btn.style.display = "inline-block";
+}
+
+function getLiffRedirectUri() {
+  return FRONTEND_BASE_URL;
 }
 
 function clearOAuthParamsFromUrl() {
@@ -802,13 +839,28 @@ async function initLiff() {
   }
 
   if (!liff.isLoggedIn()) {
-    setSplashStatus("กำลังเข้าสู่ระบบ LINE...");
-    liff.login({ redirectUri: FRONTEND_BASE_URL });
+    const inLine = typeof liff.isInClient === "function" && liff.isInClient();
+    if (!inLine) {
+      setSplashStatus("กรุณาเปิดผ่านแอป LINE (แนะนำ)");
+      showOpenInLineButton();
+    } else {
+      setSplashStatus("กำลังเข้าสู่ระบบ LINE...");
+    }
+    try {
+      liff.login({ redirectUri: getLiffRedirectUri() });
+    } catch (e) {
+      showSplashError("เข้าสู่ระบบ LINE ไม่ได้: " + (e.message || "unknown"));
+      showOpenInLineButton();
+      return;
+    }
     setTimeout(() => {
       if (document.getElementById("splash")?.style.display !== "none") {
-        showSplashError("เข้าสู่ระบบ LINE ไม่สำเร็จ — กรุณากดลองใหม่ หรือเปิดลิงก์จากแชท LINE");
+        showSplashError(inLine
+          ? "เข้าสู่ระบบ LINE ไม่สำเร็จ — กรุณากดลองใหม่"
+          : "เปิดใน Chrome/Safari อาจเข้าไม่ได้ — กด「เปิดในแอป LINE」ด้านล่าง");
+        showOpenInLineButton();
       }
-    }, 12000);
+    }, 8000);
     return;
   }
 
@@ -3177,7 +3229,40 @@ document.addEventListener("visibilitychange", () => {
   refreshDetail(detailProjectID);
 });
 
-initLiff().catch(err => showSplashError("เริ่มระบบไม่สำเร็จ: " + (err.message || "unknown")));
+function bootApp() {
+  setSplashStatus("กำลังเริ่มระบบ... v" + APP_BOOT_VERSION);
+
+  setTimeout(() => {
+    const splash = document.getElementById("splash");
+    if (!splash || splash.style.display === "none") return;
+    const errEl = document.getElementById("splashErr");
+    if (errEl && errEl.style.display === "block") return;
+    showSplashError("โหลดนานเกินไป — กรุณาเปิดจากแอป LINE หรือกดลองใหม่");
+    showOpenInLineButton();
+  }, 12000);
+
+  const start = () => initLiff().catch(err =>
+    showSplashError("เริ่มระบบไม่สำเร็จ: " + (err.message || "unknown")));
+
+  if (typeof liff !== "undefined") {
+    start();
+    return;
+  }
+  let tries = 0;
+  const iv = setInterval(() => {
+    tries++;
+    if (typeof liff !== "undefined") {
+      clearInterval(iv);
+      start();
+    } else if (tries > 40) {
+      clearInterval(iv);
+      showSplashError("โหลด LINE SDK ไม่ได้ — ปิด Ad blocker หรือเปิดจากแอป LINE");
+      showOpenInLineButton();
+    }
+  }, 250);
+}
+
+bootApp();
 </script>
 </body>
 </html>
