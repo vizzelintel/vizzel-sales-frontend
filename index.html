@@ -195,7 +195,8 @@
   <h2 class="splash-title">Vizzel Sales</h2>
   <p class="splash-sub">ระบบจัดการลูกค้า<br>หน่วยงานราชการ</p>
   <div class="splash-spinner" id="splashSpinner"></div>
-  <p id="splashStatus" style="font-size:13px;color:#8e8e93;margin-top:12px;display:none"></p>
+  <p id="splashStatus" style="font-size:13px;color:#8e8e93;margin-top:12px">กำลังโหลด...</p>
+  <p id="splashVersion" style="font-size:11px;color:#c7c7cc;margin-top:6px">v20260521c</p>
   <p id="splashErr" class="splash-err" style="display:none"></p>
   <button id="splashRetry" type="button" style="display:none;margin-top:14px;background:#06C755;color:white;border:none;padding:12px 28px;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit"
     onclick="localStorage.removeItem('vizzel_token');try{liff.logout();}catch(e){}window.location.reload();">ลองใหม่</button>
@@ -620,7 +621,7 @@
 const FRONTEND_BASE_URL = "https://vizzelintel.github.io/vizzel-sales-frontend/";
 const LIFF_ID           = "2010133685-tke1EWht";
 const LIFF_OPEN_URL     = "https://liff.line.me/" + LIFF_ID;
-const APP_BOOT_VERSION  = "20260521b";
+const APP_BOOT_VERSION  = "20260521c";
 const API               = "https://vizzel-sales-api.fly.dev";
 const API_BASE          = API + "/api/v1";
 
@@ -825,16 +826,56 @@ function selectProvince(inputId, dropdownId, province) {
 }
 
 /* ─── Init ─── */
+async function tryRestoreSession() {
+  const savedToken = localStorage.getItem("vizzel_token");
+  if (!savedToken) return false;
+  token = savedToken;
+  setSplashStatus("กำลังโหลดข้อมูล...");
+  try {
+    const ok = await promiseTimeout(loadCurrentUser(), 10000, "โหลดข้อมูลช้าเกินไป");
+    if (!ok) throw new Error("me failed");
+    safeInitApp();
+    initLiffInBackground();
+    return true;
+  } catch (_) {
+    localStorage.removeItem("vizzel_token");
+    token = "";
+    return false;
+  }
+}
+
+function initLiffInBackground() {
+  if (typeof liff === "undefined") return;
+  promiseTimeout(
+    liff.init({ liffId: LIFF_ID, withLoginOnExternalBrowser: true }),
+    15000,
+    "liff bg",
+  ).then(() => {
+    if (!liff.isLoggedIn()) return;
+    try {
+      liff.getProfile().then(p => {
+        const pic = document.getElementById("uPic");
+        if (pic && p.pictureUrl) pic.src = p.pictureUrl;
+      }).catch(() => {});
+    } catch (_) {}
+  }).catch(() => {});
+}
+
+async function initLiffSdk() {
+  await promiseTimeout(
+    liff.init({ liffId: LIFF_ID, withLoginOnExternalBrowser: true }),
+    12000,
+    "LIFF init timeout",
+  );
+}
+
 async function initLiff() {
   try {
     setSplashStatus("กำลังเชื่อมต่อ LINE...");
-    await promiseTimeout(
-      liff.init({ liffId: LIFF_ID, withLoginOnExternalBrowser: true }),
-      20000,
-      "LIFF init timeout — เปิดผ่านแอป LINE หรือลองใหม่",
-    );
+    await initLiffSdk();
   } catch(err) {
     showSplashError("เกิดข้อผิดพลาด: " + (err.message || "เปิดผ่าน LINE"));
+    showOpenInLineButton();
     return;
   }
 
@@ -865,18 +906,6 @@ async function initLiff() {
   }
 
   clearOAuthParamsFromUrl();
-
-  const savedToken = localStorage.getItem("vizzel_token");
-  if (savedToken) {
-    token = savedToken;
-    setSplashStatus("กำลังโหลดข้อมูล...");
-    try {
-      const ok = await promiseTimeout(loadCurrentUser(), 12000, "โหลดข้อมูลผู้ใช้ช้าเกินไป");
-      if (ok) { safeInitApp(); return; }
-    } catch (_) { /* fall through to LINE auth */ }
-    localStorage.removeItem("vizzel_token");
-    token = "";
-  }
 
   try {
     setSplashStatus("กำลังเข้าสู่ระบบ...");
@@ -3229,7 +3258,9 @@ document.addEventListener("visibilitychange", () => {
   refreshDetail(detailProjectID);
 });
 
-function bootApp() {
+async function bootApp() {
+  const verEl = document.getElementById("splashVersion");
+  if (verEl) verEl.textContent = "v" + APP_BOOT_VERSION;
   setSplashStatus("กำลังเริ่มระบบ... v" + APP_BOOT_VERSION);
 
   setTimeout(() => {
@@ -3237,15 +3268,17 @@ function bootApp() {
     if (!splash || splash.style.display === "none") return;
     const errEl = document.getElementById("splashErr");
     if (errEl && errEl.style.display === "block") return;
-    showSplashError("โหลดนานเกินไป — กรุณาเปิดจากแอป LINE หรือกดลองใหม่");
+    showSplashError("โหลดนานเกินไป — กดลองใหม่ หรือเปิดลิงก์จาก LINE อีกครั้ง");
     showOpenInLineButton();
-  }, 12000);
+  }, 10000);
 
-  const start = () => initLiff().catch(err =>
+  if (await tryRestoreSession()) return;
+
+  const startLiff = () => initLiff().catch(err =>
     showSplashError("เริ่มระบบไม่สำเร็จ: " + (err.message || "unknown")));
 
   if (typeof liff !== "undefined") {
-    start();
+    startLiff();
     return;
   }
   let tries = 0;
@@ -3253,16 +3286,16 @@ function bootApp() {
     tries++;
     if (typeof liff !== "undefined") {
       clearInterval(iv);
-      start();
+      startLiff();
     } else if (tries > 40) {
       clearInterval(iv);
-      showSplashError("โหลด LINE SDK ไม่ได้ — ปิด Ad blocker หรือเปิดจากแอป LINE");
+      showSplashError("โหลด LINE SDK ไม่ได้ — ตรวจสอบเน็ตแล้วกดลองใหม่");
       showOpenInLineButton();
     }
   }, 250);
 }
 
-bootApp();
+bootApp().catch(err => showSplashError("boot: " + (err.message || "unknown")));
 </script>
 </body>
 </html>
