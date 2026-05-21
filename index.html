@@ -1188,11 +1188,19 @@ document.addEventListener("DOMContentLoaded", () => {
 function rowH(p) {
   const sub = [p.agency_type, p.region].filter(Boolean).join(" · ");
   const g   = STATUS[p.status]?.group || "gray";
+  const exemptStatuses = ["contract", "closed", "reject"];
+  let countdown = "";
+  if (p.auto_reject_at && !exemptStatuses.includes(p.status)) {
+    const days = Math.ceil((new Date(p.auto_reject_at) - new Date()) / 86400000);
+    const c    = days <= 14 ? "#C62828" : days <= 30 ? "#E65100" : "#8e8e93";
+    countdown  = `<span style="font-size:11px;color:${c};white-space:nowrap">⏱ ${days}ว</span>`;
+  }
   return `<div class="prow" onclick="showDetail('${esc(p.id)}')">
     <div class="prow-info">
       <div class="prow-name">${esc(p.agency_name||'-')}</div>
       ${sub ? `<div class="prow-sub">${esc(sub)}</div>` : ""}
     </div>
+    ${countdown}
     <span class="bdg bg-${g}">${STATUS[p.status]?.short || p.status}</span>
     <span class="chev">›</span>
   </div>`;
@@ -1211,8 +1219,7 @@ async function showDetail(id) {
 
   // Render project info immediately; docs + status buttons after we know what's uploaded
   document.getElementById("detailContent").innerHTML =
-    buildDetailInfo(p) +
-    buildNoteSection(p) +
+    buildDetailHeader(p) +
     `<div class="sec" style="margin-bottom:7px">เอกสาร</div>
      <div id="docsSection"><div class="spin-wrap"><div class="spinner"></div></div></div>
      <div class="sec" style="margin-bottom:7px">เปลี่ยนสถานะ</div>
@@ -1293,6 +1300,31 @@ function buildNoteSection(p) {
       </div>
     </div>
   </div>`;
+}
+
+function buildCountdownBanner(p) {
+  const exempt = ["contract", "closed", "reject"];
+  if (exempt.includes(p.status) || !p.auto_reject_at) return "";
+
+  const daysLeft = Math.ceil((new Date(p.auto_reject_at) - new Date()) / 86400000);
+  let bg, color, icon;
+  if (daysLeft <= 14)      { bg = "#FFEBEE"; color = "#C62828"; icon = "🔴"; }
+  else if (daysLeft <= 30) { bg = "#FFF3E0"; color = "#E65100"; icon = "🟠"; }
+  else                     { bg = "#E8F5E9"; color = "#2E7D32"; icon = "🟢"; }
+
+  const msg = daysLeft > 0
+    ? `เหลือเวลา <strong>${daysLeft} วัน</strong> ก่อนปิดอัตโนมัติ`
+    : "เกินกำหนดแล้ว — จะถูกปิดในรอบถัดไป";
+
+  return `<div style="background:${bg};color:${color};border-radius:10px;padding:10px 14px;
+                       font-size:13px;display:flex;align-items:center;gap:8px;margin-bottom:12px">
+    ${icon} <span>${msg}</span>
+  </div>`;
+}
+
+// Wraps the three header sections so every detail rebuild stays in sync.
+function buildDetailHeader(p) {
+  return buildDetailInfo(p) + buildCountdownBanner(p) + buildNoteSection(p);
 }
 
 function noteCharUpdate() {
@@ -1696,8 +1728,7 @@ async function refreshDetail(projectId) {
 
   // Rebuild detail content (same pattern as doChangeStatus / showDetail)
   document.getElementById("detailContent").innerHTML =
-    buildDetailInfo(p) +
-    buildNoteSection(p) +
+    buildDetailHeader(p) +
     `<div class="sec" style="margin-bottom:7px">เอกสาร</div>
      <div id="docsSection"><div class="spin-wrap"><div class="spinner"></div></div></div>
      <div class="sec" style="margin-bottom:7px">เปลี่ยนสถานะ</div>
@@ -1813,8 +1844,7 @@ async function doChangeStatus(projectID, status, statusNote, rejectReason, appoi
       currentProject = p;
       // Re-render detail: refresh docs so status buttons reflect updated requirements
       document.getElementById("detailContent").innerHTML =
-        buildDetailInfo(p) +
-        buildNoteSection(p) +
+        buildDetailHeader(p) +
         `<div class="sec" style="margin-bottom:7px">เอกสาร</div>
          <div id="docsSection"><div class="spin-wrap"><div class="spinner"></div></div></div>
          <div class="sec" style="margin-bottom:7px">เปลี่ยนสถานะ</div>
