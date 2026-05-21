@@ -5,42 +5,52 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <title>อัปโหลดเอกสาร - Vizzel Sales</title>
   <style>
+    :root {
+      --vi-purple: #7B3FF2;
+      --vi-purple-dark: #5B21B6;
+      --vi-blue: #00A8E8;
+      --vi-bg: #FFFFFF;
+      --vi-page: #F5F3FF;
+      --vi-text: #1E1B4B;
+      --vi-muted: #64748B;
+      --vi-border: #E2E8F0;
+      --vi-gradient: linear-gradient(135deg, #7B3FF2 0%, #00A8E8 100%);
+    }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-           background: #f2f2f7; color: #1c1c1e; padding: 28px 16px; min-height: 100vh; }
+           background: var(--vi-bg); color: var(--vi-text); padding: 28px 16px; min-height: 100vh; }
 
     .header { text-align: center; margin-bottom: 24px; }
-    .header-icon  { font-size: 44px; margin-bottom: 10px; }
-    .header-title { font-size: 20px; font-weight: 700; }
-    .header-sub   { font-size: 13px; color: #8e8e93; margin-top: 4px; }
+    .header-logo-wrap { display: inline-block; background: var(--vi-gradient); padding: 10px 14px; border-radius: 12px; margin-bottom: 12px; }
+    .header-logo { height: 40px; width: auto; max-width: 180px; object-fit: contain; display: block; }
+    .header-title { font-size: 20px; font-weight: 700; color: var(--vi-purple-dark); }
+    .header-sub   { font-size: 13px; color: var(--vi-muted); margin-top: 4px; }
 
     .card { background: white; border-radius: 12px; padding: 18px 16px;
-            margin-bottom: 14px; box-shadow: 0 1px 3px rgba(0,0,0,.07); }
+            margin-bottom: 14px; box-shadow: 0 2px 12px rgba(91, 33, 182, 0.06); border: 1px solid var(--vi-border); }
 
-    .lbl { font-size: 12px; color: #8e8e93; font-weight: 600;
+    .lbl { font-size: 12px; color: var(--vi-muted); font-weight: 600;
            text-transform: uppercase; letter-spacing: .4px; margin-bottom: 8px; }
 
-    select { width: 100%; border: 1.5px solid #e5e5ea; border-radius: 10px;
-             padding: 12px; font-size: 15px; font-family: inherit; color: #1c1c1e;
+    select { width: 100%; border: 1.5px solid var(--vi-border); border-radius: 10px;
+             padding: 12px; font-size: 15px; font-family: inherit; color: var(--vi-text);
              background: white; outline: none; appearance: none; -webkit-appearance: none; }
-    select:focus { border-color: #06C755; }
+    select:focus { border-color: var(--vi-purple); }
 
     .file-wrap { position: relative; }
     .file-btn  { display: flex; align-items: center; justify-content: center; gap: 10px;
                  width: 100%; padding: 16px; border: 1.5px dashed #c7c7cc;
                  border-radius: 10px; background: white; font-size: 15px;
                  font-family: inherit; cursor: pointer; color: #636366; }
-    .file-btn.has-file { border-color: #06C755; background: #f0fdf4; color: #06C755; }
-    /* opacity:0 overlay — the browser receives a real tap directly on the input */
+    .file-btn.has-file { border-color: var(--vi-purple); background: #EDE9FE; color: var(--vi-purple-dark); }
     .file-inp  { position: absolute; top: 0; left: 0; width: 100%; height: 100%;
                  opacity: 0; cursor: pointer; font-size: 0; }
-    .file-meta { margin-top: 8px; font-size: 13px; color: #06C755;
-                 font-weight: 600; word-break: break-all; }
+    .file-meta { margin-top: 8px; font-size: 13px; color: var(--vi-purple); font-weight: 600; word-break: break-all; }
 
     .btn { display: block; width: 100%; padding: 16px; border: none;
            border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer;
-           text-align: center; font-family: inherit; background: #06C755; color: white;
-           transition: opacity .15s; margin-top: 6px; }
+           text-align: center; font-family: inherit; background: var(--vi-gradient); color: white;
+           transition: opacity .15s; margin-top: 6px; box-shadow: 0 2px 8px rgba(123, 63, 242, 0.25); }
     .btn:disabled { opacity: .5; cursor: not-allowed; }
 
     .spinner { display: inline-block; width: 18px; height: 18px;
@@ -51,17 +61,19 @@
 
     .msg { padding: 16px; border-radius: 12px; font-size: 14px; line-height: 1.6;
            text-align: center; margin-top: 14px; white-space: pre-line; }
-    .msg-ok  { background: #e4f9ec; color: #1a7a3b; }
+    .msg-ok  { background: #EDE9FE; color: var(--vi-purple-dark); }
     .msg-err { background: #ffe5e5; color: #c0392b; }
 
-    .err-banner { background: #fff8e1; border-radius: 10px; padding: 14px;
-                  font-size: 13px; color: #7a5f00; line-height: 1.5; text-align: center; }
+    .err-banner { background: #F5F3FF; border-radius: 10px; padding: 14px; border: 1px solid var(--vi-border);
+                  font-size: 13px; color: var(--vi-purple-dark); line-height: 1.5; text-align: center; }
   </style>
 </head>
 <body>
 
 <div class="header">
-  <div class="header-icon">📋</div>
+  <div class="header-logo-wrap">
+    <img src="assets/logo.png" alt="Vizzel Intel Access" class="header-logo">
+  </div>
   <div class="header-title">อัปโหลดเอกสาร</div>
   <div class="header-sub">Vizzel Sales</div>
 </div>
@@ -70,7 +82,7 @@
   <div class="card">
     <div class="lbl">ประเภทเอกสาร</div>
     <div id="doc-type-display"
-         style="padding:14px;background:#f5f5f5;border-radius:8px;font-size:15px;color:#333;font-weight:700">
+         style="padding:14px;background:#F5F3FF;border-radius:8px;font-size:15px;color:var(--vi-purple-dark);font-weight:700">
       กำลังโหลด...
     </div>
   </div>
@@ -78,12 +90,11 @@
   <div class="card">
     <div class="lbl">ไฟล์เอกสาร * — PDF, Word, Excel</div>
     <div class="file-wrap">
-      <button type="button" class="file-btn" id="file-btn">📎 เลือกไฟล์</button>
-      <input type="file" class="file-inp" id="file-inp"
-             accept=".pdf,.doc,.docx,.xls,.xlsx"
+      <label class="file-btn" id="file-btn" for="file-inp">📎 เลือกไฟล์</label>
+      <input type="file" id="file-inp" class="file-inp" accept=".pdf,.doc,.docx,.xls,.xlsx"
              onchange="onFileChosen(this)">
     </div>
-    <div class="file-meta" id="file-meta" style="display:none"></div>
+    <div id="file-meta" class="file-meta" style="display:none"></div>
   </div>
 
   <button class="btn" id="submit-btn" onclick="doUpload()">อัปโหลด</button>
@@ -100,7 +111,6 @@ const TOKEN             = params.get("token")      || "";
 
 // Maps any Thai label (from old links) to the canonical English doc_type value
 const DOC_TYPE_MAP = {
-  // Thai labels → new English values
   'ใบเสนอราคา':                          'quotation_support',
   'ส่งใบเสนอราคา':                        'quotation_support',
   'ร่าง TOR':                            'tor_support',
@@ -111,7 +121,6 @@ const DOC_TYPE_MAP = {
   'ปิดงาน':                              'closing',
   'เอกสารปิดงาน':                         'closing',
   'แนบเอกสารปิดงานและตรวจนับสินทรัพย์':  'closing',
-  // Old doc type keys → new keys (backward compat for old links)
   'quotation':    'quotation_support',
   'tor':          'tor_support',
 };
@@ -128,12 +137,10 @@ const DOC_TYPE_LABELS = {
   'เอกสารประกอบ':      'attachment',
 };
 
-// Resolve doc_type from URL param (supports both English values and Thai legacy labels)
 const rawDocType = params.get("doc_type") || "";
 const docType    = DOC_TYPE_MAP[rawDocType] || rawDocType;
 const docLabel   = DOC_TYPE_LABELS[docType] || '';
 
-// Validate required params and show appropriate errors
 if (!PROJECT_ID || !TOKEN) {
   document.getElementById("main").innerHTML =
     `<div class="err-banner">⚠️ ลิงก์ไม่ถูกต้อง<br>กรุณากลับไปที่แอป Vizzel Sales แล้วลองใหม่</div>`;
@@ -201,7 +208,6 @@ async function doUpload() {
           docType:   docType,
         }, '*');
       } catch(e) {}
-      // Brief pause so the message is dispatched before the window closes
       await new Promise(r => setTimeout(r, 500));
       window.close();
     } else {
