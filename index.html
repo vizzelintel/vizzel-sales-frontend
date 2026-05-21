@@ -1555,10 +1555,17 @@ async function showDetail(id) {
   startDetailRefresh(id);
 }
 
+let detailNoteEditing = false;
+let detailInfoEditing = false;
+
+function isDetailUserEditing() {
+  return detailNoteEditing || detailInfoEditing;
+}
+
 function startDetailRefresh(projectId) {
   stopDetailRefresh();
   detailPollId = setInterval(() => {
-    if (document.hidden) return;
+    if (document.hidden || isDetailUserEditing()) return;
     if (detailProjectID === projectId &&
         document.getElementById("screen-detail")?.classList.contains("on")) {
       refreshDetail(projectId, { light: true });
@@ -1571,6 +1578,8 @@ function stopDetailRefresh() {
     clearInterval(detailPollId);
     detailPollId = null;
   }
+  detailNoteEditing = false;
+  detailInfoEditing = false;
 }
 
 const AGENCY_TYPE_OPTIONS = [
@@ -1663,6 +1672,7 @@ function enableInfoEdit() {
     toast("ไม่สามารถแก้ไขได้ เนื่องจากงานปิดแล้ว");
     return;
   }
+  detailInfoEditing = true;
   document.getElementById("infoViewMode").style.display = "none";
   document.getElementById("infoEditMode").style.display = "block";
   const btn = document.getElementById("infoEditBtn");
@@ -1679,6 +1689,7 @@ function enableInfoEdit() {
 }
 
 function cancelInfoEdit() {
+  detailInfoEditing = false;
   document.getElementById("infoViewMode").style.display = "block";
   document.getElementById("infoEditMode").style.display = "none";
   const btn = document.getElementById("infoEditBtn");
@@ -1743,6 +1754,7 @@ async function saveProjectInfo() {
     currentProject = data;
     const idx = projects.findIndex(x => x.id === p.id);
     if (idx >= 0) projects[idx] = data;
+    detailInfoEditing = false;
     toast("บันทึกข้อมูลโครงการแล้ว ✓");
     await refreshDetail(p.id);
   } catch {
@@ -1873,6 +1885,7 @@ function enableNoteEdit() {
     toast("ไม่สามารถแก้ไขได้ เนื่องจากงานปิดแล้ว");
     return;
   }
+  detailNoteEditing = true;
   document.getElementById("noteViewMode").style.display = "none";
   document.getElementById("noteEditMode").style.display = "block";
   const btn = document.getElementById("noteEditBtn");
@@ -1883,6 +1896,7 @@ function enableNoteEdit() {
 }
 
 function cancelNoteEdit() {
+  detailNoteEditing = false;
   document.getElementById("noteViewMode").style.display = "block";
   document.getElementById("noteEditMode").style.display = "none";
   const btn = document.getElementById("noteEditBtn");
@@ -2336,6 +2350,9 @@ async function refreshDetail(projectId, options = {}) {
 
   const p = currentProject || projects.find(x => x.id === projectId);
   if (!p) return;
+
+  // Do not rebuild DOM while user is typing in note/info edit — prevents "bounce out".
+  if (isDetailUserEditing()) return;
 
   let docs = [];
   try {
@@ -2977,7 +2994,7 @@ function copyInviteCode() {
 
 // When the user returns from the external upload tab, refresh project + docs.
 document.addEventListener("visibilitychange", () => {
-  if (document.hidden || !detailProjectID) return;
+  if (document.hidden || !detailProjectID || isDetailUserEditing()) return;
   refreshDetail(detailProjectID);
 });
 
