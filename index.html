@@ -553,9 +553,10 @@
 </div>
 
 <script>
-const LIFF_ID  = "2010133685-tke1EWht";
-const API      = "https://vizzel-sales-api.fly.dev";
-const API_BASE = API + "/api/v1";
+const FRONTEND_BASE_URL = "https://vizzelintel.github.io/vizzel-sales-frontend/";
+const LIFF_ID           = "2010133685-tke1EWht";
+const API               = "https://vizzel-sales-api.fly.dev";
+const API_BASE          = API + "/api/v1";
 
 let token    = "";
 let projects = [];
@@ -584,7 +585,7 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 8000) {
 
 /* ─── Status metadata ─── */
 const STATUS = {
-  registrator: { label: "Registrator",     short: "Registr.",   group: "gray"   },
+  register:    { label: "Register",        short: "Register",   group: "gray"   },
   present:     { label: "นัดหมาย Present", short: "Present",    group: "blue"   },
   demo:        { label: "นัดหมาย Demo",    short: "Demo",       group: "blue"   },
   site_survey: { label: "Site Survey",     short: "Survey",     group: "blue"   },
@@ -686,7 +687,7 @@ async function initLiff() {
 
   // 3. If not logged into LINE, redirect to login
   if (!liff.isLoggedIn()) {
-    liff.login({ redirectUri: "https://vizzelintel.github.io/vizzel-sales-frontend/" });
+    liff.login({ redirectUri: FRONTEND_BASE_URL });
     return;
   }
 
@@ -1600,7 +1601,7 @@ function renderStatusSection(p, docs) {
   let html = "";
   const iid = esc(p.id);
 
-  if (p.status === "registrator") {
+  if (p.status === "register") {
     // ── Present scheduling panel ──────────────────────────────────────
     html = `<div class="dcard" style="padding:16px;margin-bottom:12px">
       <div style="font-weight:700;font-size:15px;color:#007AFF;margin-bottom:14px">📅 นัดหมาย Present</div>
@@ -1742,7 +1743,7 @@ function toggleActionPanel(panelId, arrowId) {
 }
 
 function openDocUpload(projectId, docType) {
-  const url = "https://vizzelintel.github.io/vizzel-sales-frontend/upload.html" +
+  const url = FRONTEND_BASE_URL + "upload.html" +
     "?project_id=" + encodeURIComponent(projectId) +
     "&token="      + encodeURIComponent(token) +
     "&doc_type="   + encodeURIComponent(docType);
@@ -2179,7 +2180,7 @@ function logout() {
   token       = null;
   currentUser = null;
   if (liff.isLoggedIn()) { try { liff.logout(); } catch(e) {} }
-  window.location.replace("https://vizzelintel.github.io/vizzel-sales-frontend/");
+  window.location.replace(FRONTEND_BASE_URL);
 }
 
 /* ─── Profile: ข้อมูลส่วนตัว ─── */
