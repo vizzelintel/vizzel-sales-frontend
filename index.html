@@ -1466,7 +1466,8 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!res.ok) {
         if (data.existing_project_id) {
           const eid = data.existing_project_id;
-          errEl.innerHTML = `${esc(data.error)} <a href="#" style="color:#007AFF"
+          const st  = data.existing_project_status ? ` (${esc(data.existing_project_status)})` : "";
+          errEl.innerHTML = `${esc(data.error || "มีโครงการชื่อนี้อยู่แล้ว")}${st} <a href="#" style="color:#007AFF"
             onclick="closeCreateModal();showDetail('${eid}');return false;">ดูโครงการ ›</a>`;
         } else {
           errEl.textContent = data.error || "เกิดข้อผิดพลาด";
@@ -1525,8 +1526,11 @@ async function showDetail(id) {
 
   let docs = [];
   try {
-    await fetchProjectAppointments(id);
-    docs = await fetchProjectDocs(id);
+    const [, fetchedDocs] = await Promise.all([
+      fetchProjectAppointments(id),
+      fetchProjectDocs(id),
+    ]);
+    docs = fetchedDocs;
   } catch { /* fetchProjectDocs returns [] on error; this is a safety net */ }
 
   document.getElementById("detailContent").innerHTML =
@@ -1554,9 +1558,10 @@ async function showDetail(id) {
 function startDetailRefresh(projectId) {
   stopDetailRefresh();
   detailPollId = setInterval(() => {
+    if (document.hidden) return;
     if (detailProjectID === projectId &&
         document.getElementById("screen-detail")?.classList.contains("on")) {
-      refreshDetail(projectId);
+      refreshDetail(projectId, { light: true });
     }
   }, 12000);
 }
@@ -2147,7 +2152,8 @@ function getNextDocType(project, docs) {
 
 // Fetches fresh project + docs from API, rebuilds the detail screen in place.
 // Call after any operation that may have changed project status or documents.
-async function refreshDetail(projectId) {
+async function refreshDetail(projectId, options = {}) {
+  const light = options.light === true;
   const detailScreen = document.getElementById("screen-detail");
   if (!detailScreen?.classList.contains("on")) return; // not on detail screen
 
@@ -2169,8 +2175,11 @@ async function refreshDetail(projectId) {
 
   let docs = [];
   try {
-    await fetchProjectAppointments(projectId);
-    docs = await fetchProjectDocs(projectId);
+    const [, fetchedDocs] = await Promise.all([
+      fetchProjectAppointments(projectId),
+      fetchProjectDocs(projectId),
+    ]);
+    docs = fetchedDocs;
   } catch {}
 
   document.getElementById("detailContent").innerHTML =
@@ -2189,8 +2198,10 @@ async function refreshDetail(projectId) {
     if (el) el.innerHTML = `<p style="color:#8e8e93;font-size:13px;text-align:center;padding:16px">ไม่สามารถโหลดสถานะได้ กรุณารีเฟรช</p>`;
   }
 
-  renderPipeline();
-  renderProjList();
+  if (!light) {
+    renderPipeline();
+    renderProjList();
+  }
 }
 
 async function deleteDocument(docId) {
