@@ -248,6 +248,39 @@
   </div>
 </div>
 
+<!-- ── Email Verification Gate ── -->
+<div id="emailVerify" style="display:none;min-height:100vh;background:#f2f2f7;padding:24px 16px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+  <div style="max-width:480px;margin:0 auto">
+    <div style="text-align:center;margin-bottom:24px">
+      <div style="font-size:48px;margin-bottom:10px">📧</div>
+      <div style="font-size:22px;font-weight:700;margin-bottom:6px">ยืนยันอีเมลก่อนใช้งาน</div>
+      <div style="font-size:13px;color:#8e8e93">เพื่อให้ส่งคำเชิญปฏิทินได้ทั้ง Google/Outlook</div>
+    </div>
+    <div style="background:white;border-radius:16px;padding:22px;box-shadow:0 1px 4px rgba(0,0,0,.08)">
+      <div style="margin-bottom:12px">
+        <label style="font-size:13px;color:#636366;font-weight:600;display:block;margin-bottom:6px">อีเมล *</label>
+        <input id="verifyEmailInput" type="email" placeholder="example@email.com"
+          style="width:100%;padding:11px 12px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;outline:none;box-sizing:border-box">
+      </div>
+      <button id="verifySendBtn" onclick="sendVerifyOTP()"
+        style="width:100%;background:#06C755;color:white;border:none;padding:12px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:10px">
+        ส่งรหัส OTP
+      </button>
+      <div style="margin-bottom:12px">
+        <label style="font-size:13px;color:#636366;font-weight:600;display:block;margin-bottom:6px">OTP 6 หลัก *</label>
+        <input id="verifyOtpInput" type="text" maxlength="6" placeholder="123456"
+          style="width:100%;padding:11px 12px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;outline:none;box-sizing:border-box;letter-spacing:3px">
+      </div>
+      <button id="verifyConfirmBtn" onclick="confirmVerifyOTP()"
+        style="width:100%;background:#007AFF;color:white;border:none;padding:12px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">
+        ยืนยันอีเมล
+      </button>
+      <div id="verifyHint" style="margin-top:10px;font-size:12px;color:#8e8e93;line-height:1.4"></div>
+      <div id="verifyError" style="margin-top:10px;color:#FF3B30;font-size:13px;display:none"></div>
+    </div>
+  </div>
+</div>
+
 <!-- ── App ── -->
 <div id="app">
   <div class="hdr">
@@ -569,6 +602,7 @@ let detailProjectID = "";
 let currentProject  = null;
 let currentDocs     = [];
 let currentUser     = null;
+let verifyCooldownUntil = 0;
 
 async function fetchWithTimeout(url, options = {}, timeoutMs = 8000) {
   const controller = new AbortController();
@@ -749,6 +783,7 @@ async function initLiff() {
 function showRegister() {
   document.getElementById("splash").style.display    = "none";
   document.getElementById("app").style.display       = "none";
+  document.getElementById("emailVerify").style.display = "none";
   document.getElementById("register").style.display  = "block";
 
   // Pre-fill name from LINE display_name (best-effort split)
@@ -804,6 +839,10 @@ async function submitRegister() {
   errEl.style.display = "none";
   if (!firstName) { errEl.textContent = "กรุณากรอกชื่อ"; errEl.style.display = "block"; return; }
   if (!lastName)  { errEl.textContent = "กรุณากรอกนามสกุล"; errEl.style.display = "block"; return; }
+  if (!email)     { errEl.textContent = "กรุณากรอกอีเมล"; errEl.style.display = "block"; return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    errEl.textContent = "กรุณากรอกอีเมลให้ถูกต้อง"; errEl.style.display = "block"; return;
+  }
   if (!inviteCode){ errEl.textContent = "กรุณากรอก Invite Code"; errEl.style.display = "block"; return; }
 
   btn.disabled = true;
@@ -839,7 +878,8 @@ async function submitRegister() {
 
     const ok = await loadCurrentUser();
     if (!ok) throw new Error("load user failed");
-    initApp();
+    if (currentUser?.email_verified) initApp();
+    else showEmailVerifyGate();
 
   } catch(e) {
     errEl.textContent = "เกิดข้อผิดพลาด: " + e.message;
@@ -865,6 +905,10 @@ async function loadCurrentUser() {
 
 // Show the app after successful auth + user load.
 function initApp() {
+  if (!currentUser?.email_verified) {
+    showEmailVerifyGate();
+    return;
+  }
   if (currentUser) {
     document.getElementById("uName").textContent          = currentUser.full_name || currentUser.first_name || "...";
     document.getElementById("dropdownName").textContent    = currentUser.full_name || currentUser.first_name || "...";
@@ -895,8 +939,102 @@ function initApp() {
   }
 
   document.getElementById("splash").style.display = "none";
+  document.getElementById("register").style.display = "none";
+  document.getElementById("emailVerify").style.display = "none";
   document.getElementById("app").style.display    = "flex";
   loadProjects();
+}
+
+function showEmailVerifyGate() {
+  document.getElementById("splash").style.display = "none";
+  document.getElementById("register").style.display = "none";
+  document.getElementById("app").style.display = "none";
+  document.getElementById("emailVerify").style.display = "block";
+  document.getElementById("verifyError").style.display = "none";
+  document.getElementById("verifyHint").textContent = "ระบบจะส่งรหัส OTP ไปยังอีเมลที่ระบุ";
+  const emailInput = document.getElementById("verifyEmailInput");
+  if (emailInput && !emailInput.value) emailInput.value = currentUser?.email || "";
+}
+
+async function sendVerifyOTP() {
+  const email = document.getElementById("verifyEmailInput").value.trim();
+  const errEl = document.getElementById("verifyError");
+  const hintEl = document.getElementById("verifyHint");
+  const btn = document.getElementById("verifySendBtn");
+  errEl.style.display = "none";
+  if (!email) {
+    errEl.textContent = "กรุณากรอกอีเมล";
+    errEl.style.display = "block";
+    return;
+  }
+  if (Date.now() < verifyCooldownUntil) {
+    errEl.textContent = "กรุณารอสักครู่ก่อนส่งรหัสใหม่";
+    errEl.style.display = "block";
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = "กำลังส่ง...";
+  try {
+    const res = await fetchWithTimeout(`${API_BASE}/auth/email/send-otp`, {
+      method: "POST",
+      headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    }, 10000);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      errEl.textContent = data.error || "ส่งรหัสไม่สำเร็จ";
+      errEl.style.display = "block";
+    } else {
+      verifyCooldownUntil = Date.now() + 60000;
+      hintEl.textContent = "ส่ง OTP แล้ว กรุณาตรวจอีเมลและกรอกรหัส 6 หลัก";
+      if (data.debug_otp) hintEl.textContent += ` (DEV OTP: ${data.debug_otp})`;
+      toast("ส่ง OTP สำเร็จ ✓");
+    }
+  } catch {
+    errEl.textContent = "ไม่สามารถเชื่อมต่อได้";
+    errEl.style.display = "block";
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "ส่งรหัส OTP";
+  }
+}
+
+async function confirmVerifyOTP() {
+  const email = document.getElementById("verifyEmailInput").value.trim();
+  const otp = document.getElementById("verifyOtpInput").value.trim();
+  const errEl = document.getElementById("verifyError");
+  const btn = document.getElementById("verifyConfirmBtn");
+  errEl.style.display = "none";
+  if (!email || !otp) {
+    errEl.textContent = "กรุณากรอกอีเมลและ OTP";
+    errEl.style.display = "block";
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = "กำลังยืนยัน...";
+  try {
+    const res = await fetchWithTimeout(`${API_BASE}/auth/email/verify-otp`, {
+      method: "POST",
+      headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
+      body: JSON.stringify({ email, otp }),
+    }, 10000);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      errEl.textContent = data.error || "ยืนยันไม่สำเร็จ";
+      errEl.style.display = "block";
+      return;
+    }
+    const ok = await loadCurrentUser();
+    if (!ok) throw new Error("load user failed");
+    toast("ยืนยันอีเมลสำเร็จ ✓");
+    initApp();
+  } catch (e) {
+    errEl.textContent = "เกิดข้อผิดพลาด: " + (e.message || "ไม่สามารถเชื่อมต่อได้");
+    errEl.style.display = "block";
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "ยืนยันอีเมล";
+  }
 }
 
 /* ─── Data ─── */
@@ -1963,9 +2101,12 @@ async function doChangeStatus(projectID, status, statusNote, rejectReason, appoi
     }
 
     if (APPT_STATUSES.has(status) && appointmentDate) {
-      toast(data.calendar_ok
-        ? "✅ บันทึกนัดหมายในปฏิทินแล้ว"
-        : "⚠️ เปลี่ยนสถานะแล้ว แต่ไม่สามารถบันทึกปฏิทินได้");
+      if (data.calendar_ok) {
+        toast("✅ " + (data.calendar_message || "บันทึกนัดหมายในปฏิทินแล้ว"));
+      } else {
+        toast("⚠️ เปลี่ยนสถานะแล้ว แต่ไม่สามารถบันทึกปฏิทินได้" +
+          (data.calendar_message ? (" (" + data.calendar_message + ")") : ""));
+      }
     } else {
       toast("อัปเดตสถานะสำเร็จ ✓");
     }
