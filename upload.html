@@ -91,10 +91,11 @@
 </div>
 
 <script>
-const params     = new URLSearchParams(location.search);
-const PROJECT_ID = params.get("project_id") || "";
-const TOKEN      = params.get("token")      || "";
-const API_BASE   = "https://vizzel-sales-api.fly.dev";
+const FRONTEND_BASE_URL = "https://vizzelintel.github.io/vizzel-sales-frontend/";
+const params            = new URLSearchParams(location.search);
+const PROJECT_ID        = params.get("project_id") || "";
+const TOKEN             = params.get("token")      || "";
+const API_BASE          = "https://vizzel-sales-api.fly.dev/api/v1";
 
 // Maps any Thai label (from old links) to the canonical English doc_type value
 const DOC_TYPE_MAP = {
@@ -178,7 +179,7 @@ async function doUpload() {
   fd.append("file",       selectedFile);
 
   try {
-    const res  = await fetch(API_BASE + "/api/v1/documents", {
+    const res  = await fetch(API_BASE + "/documents", {
       method:  "POST",
       headers: { Authorization: "Bearer " + TOKEN },
       body:    fd,
@@ -202,7 +203,7 @@ async function doUpload() {
       window.close();
     } else {
       setTimeout(() => {
-        window.location.href = 'https://vizzelintel.github.io/vizzel-sales-frontend/';
+        window.location.href = FRONTEND_BASE_URL;
       }, 1500);
     }
   } catch(e) {
