@@ -200,7 +200,8 @@
       </div>
       <div onclick="showProfileScreen('profile')" style="padding:13px 16px;cursor:pointer;font-size:14px;border-bottom:1px solid #f5f5f5">👤 ข้อมูลส่วนตัว</div>
       <div id="menuMembers" onclick="showProfileScreen('members')" style="padding:13px 16px;cursor:pointer;font-size:14px;border-bottom:1px solid #f5f5f5;display:none">👥 ข้อมูลพนักงาน</div>
-      <div id="menuCompany" onclick="showProfileScreen('company')" style="padding:13px 16px;cursor:pointer;font-size:14px;border-bottom:1px solid #f5f5f5;display:none">🏢 ข้อมูลบริษัท</div>
+      <div id="menuCompanies" onclick="showProfileScreen('companies')" style="padding:13px 16px;cursor:pointer;font-size:14px;border-bottom:1px solid #f5f5f5;display:none">🏢 บริษัท Dealer</div>
+      <div id="menuCompany" onclick="showProfileScreen('company')" style="padding:13px 16px;cursor:pointer;font-size:14px;border-bottom:1px solid #f5f5f5;display:none">⚙️ ข้อมูลบริษัทเรา</div>
       <div onclick="logout()" style="padding:13px 16px;cursor:pointer;font-size:14px;color:#FF3B30">🚪 ออกจากระบบ</div>
     </div>
   </div>
@@ -223,15 +224,64 @@
 
     <!-- Projects list -->
     <div class="screen" id="screen-projects">
-      <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
         <input type="text" id="searchInput" placeholder="ค้นหาหน่วยงาน..."
-          style="flex:1;padding:10px 14px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;outline:none;"
-          oninput="onSearchInput()">
+          style="flex:1;padding:10px 14px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;outline:none;">
         <button onclick="openCreateModal()"
           style="background:#06C755;color:white;border:none;padding:10px 16px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit">
           + สร้าง
         </button>
       </div>
+
+      <!-- Filter bar: shown only for admin + support -->
+      <div id="filterBar" style="display:none;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+        <select id="filterCompany" onchange="applyFilters()"
+          style="padding:8px 10px;border-radius:8px;border:1.5px solid #e5e5ea;font-size:13px;font-family:inherit;outline:none;background:white">
+          <option value="">ทุกบริษัท</option>
+        </select>
+        <select id="filterAgencyType" onchange="applyFilters()"
+          style="padding:8px 10px;border-radius:8px;border:1.5px solid #e5e5ea;font-size:13px;font-family:inherit;outline:none;background:white">
+          <option value="">ทุกประเภท</option>
+          <option>กระทรวง</option><option>กรม</option>
+          <option>องค์การบริหารส่วนจังหวัด</option><option>องค์การบริหารส่วนตำบล</option>
+          <option>เทศบาลนคร</option><option>เทศบาลเมือง</option><option>เทศบาลตำบล</option>
+          <option>รัฐวิสาหกิจ</option><option>โรงเรียน</option><option>วิทยาลัย</option>
+          <option>มหาวิทยาลัย</option><option>โรงพยาบาลศูนย์</option>
+          <option>โรงพยาบาลทั่วไป</option><option>โรงพยาบาลชุมชน</option>
+          <option>โรงพยาบาลเอกชน</option><option>บริษัทเอกชน</option>
+        </select>
+        <select id="filterProvince" onchange="applyFilters()"
+          style="padding:8px 10px;border-radius:8px;border:1.5px solid #e5e5ea;font-size:13px;font-family:inherit;outline:none;background:white">
+          <option value="">ทุกจังหวัด</option>
+          <option>กระบี่</option><option>กรุงเทพมหานคร</option><option>กาญจนบุรี</option>
+          <option>กาฬสินธุ์</option><option>กำแพงเพชร</option><option>ขอนแก่น</option>
+          <option>จันทบุรี</option><option>ฉะเชิงเทรา</option><option>ชลบุรี</option>
+          <option>ชัยนาท</option><option>ชัยภูมิ</option><option>ชุมพร</option>
+          <option>เชียงราย</option><option>เชียงใหม่</option><option>ตรัง</option>
+          <option>ตราด</option><option>ตาก</option><option>นครนายก</option>
+          <option>นครปฐม</option><option>นครพนม</option><option>นครราชสีมา</option>
+          <option>นครศรีธรรมราช</option><option>นครสวรรค์</option><option>นนทบุรี</option>
+          <option>นราธิวาส</option><option>น่าน</option><option>บึงกาฬ</option>
+          <option>บุรีรัมย์</option><option>ปทุมธานี</option><option>ประจวบคีรีขันธ์</option>
+          <option>ปราจีนบุรี</option><option>ปัตตานี</option><option>พระนครศรีอยุธยา</option>
+          <option>พะเยา</option><option>พังงา</option><option>พัทลุง</option>
+          <option>พิจิตร</option><option>พิษณุโลก</option><option>เพชรบุรี</option>
+          <option>เพชรบูรณ์</option><option>แพร่</option><option>ภูเก็ต</option>
+          <option>มหาสารคาม</option><option>มุกดาหาร</option><option>แม่ฮ่องสอน</option>
+          <option>ยโสธร</option><option>ยะลา</option><option>ร้อยเอ็ด</option>
+          <option>ระนอง</option><option>ระยอง</option><option>ราชบุรี</option>
+          <option>ลพบุรี</option><option>ลำปาง</option><option>ลำพูน</option>
+          <option>เลย</option><option>ศรีสะเกษ</option><option>สกลนคร</option>
+          <option>สงขลา</option><option>สตูล</option><option>สมุทรปราการ</option>
+          <option>สมุทรสงคราม</option><option>สมุทรสาคร</option><option>สระแก้ว</option>
+          <option>สระบุรี</option><option>สิงห์บุรี</option><option>สุโขทัย</option>
+          <option>สุพรรณบุรี</option><option>สุราษฎร์ธานี</option><option>สุรินทร์</option>
+          <option>หนองคาย</option><option>หนองบัวลำภู</option><option>อ่างทอง</option>
+          <option>อำนาจเจริญ</option><option>อุดรธานี</option><option>อุตรดิตถ์</option>
+          <option>อุทัยธานี</option><option>อุบลราชธานี</option>
+        </select>
+      </div>
+
       <div class="plist" id="projList"></div>
     </div>
 
@@ -323,6 +373,18 @@
     <div id="membersList"></div>
   </div>
 
+  <!-- ── Screen: บริษัท Dealer ── -->
+  <div id="screen-companies" style="display:none;padding:16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div style="font-weight:700;font-size:16px">บริษัท Dealer</div>
+      <button id="btnCreateCompany" onclick="openCreateCompanyModal()"
+        style="background:#06C755;color:white;border:none;padding:10px 18px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">
+        + เพิ่มบริษัท
+      </button>
+    </div>
+    <div id="companiesList"></div>
+  </div>
+
   <!-- ── Screen: ข้อมูลบริษัท ── -->
   <div id="screen-company" style="display:none;padding:16px">
     <div style="background:white;border-radius:12px;padding:20px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.07)">
@@ -347,6 +409,36 @@
       <div id="inviteCodeDisplay" style="background:#f5f5f5;border-radius:10px;padding:14px;font-size:22px;font-weight:700;letter-spacing:4px;text-align:center;color:#1c1c1e;margin-bottom:12px">--------</div>
       <button onclick="copyInviteCode()" style="width:100%;background:#007AFF;color:white;border:none;padding:13px;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit">📋 คัดลอก Invite Code</button>
     </div>
+  </div>
+</div>
+
+<!-- ── Create company modal ── -->
+<div id="createCompanyModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:16px;padding:24px;width:90%;max-width:480px;max-height:90vh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <h2 style="margin:0;font-size:18px;font-weight:700">เพิ่มบริษัท Dealer</h2>
+      <button onclick="closeCreateCompanyModal()" style="background:none;border:none;font-size:24px;cursor:pointer;line-height:1;color:#636366">×</button>
+    </div>
+    <div style="margin-bottom:14px">
+      <label style="font-size:13px;color:#636366;font-weight:600">ชื่อบริษัท *</label>
+      <input id="newCompanyName" type="text" placeholder="เช่น บริษัท ล็อกซเล่ย์ จำกัด"
+        style="width:100%;padding:10px 12px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;margin-top:6px;outline:none;box-sizing:border-box">
+    </div>
+    <div style="margin-bottom:14px">
+      <label style="font-size:13px;color:#636366;font-weight:600">ที่อยู่</label>
+      <textarea id="newCompanyAddress" rows="3"
+        style="width:100%;padding:10px 12px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;margin-top:6px;outline:none;resize:none;box-sizing:border-box"></textarea>
+    </div>
+    <div style="margin-bottom:20px">
+      <label style="font-size:13px;color:#636366;font-weight:600">เลขนิติบุคคล</label>
+      <input id="newCompanyTaxId" type="text"
+        style="width:100%;padding:10px 12px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;margin-top:6px;outline:none;box-sizing:border-box">
+    </div>
+    <div id="createCompanyError" style="color:#FF3B30;margin-bottom:12px;display:none;font-size:13px"></div>
+    <button onclick="submitCreateCompany()"
+      style="width:100%;background:#06C755;color:white;border:none;padding:14px;border-radius:12px;font-size:16px;font-weight:600;cursor:pointer;font-family:inherit">
+      สร้างบริษัท
+    </button>
   </div>
 </div>
 
@@ -586,15 +678,33 @@ function initApp() {
     liff.getProfile().then(p => { document.getElementById("uPic").src = p.pictureUrl || ""; }).catch(() => {});
   } catch(e) {}
 
+  // Show filter bar and populate company dropdown for admin/support
+  const role = currentUser?.role || "";
+  if (role === "admin" || role === "support") {
+    const fb = document.getElementById("filterBar");
+    if (fb) fb.style.display = "flex";
+    loadCompanyFilterOptions();
+  }
+
+  // Wire search input to applyFilters
+  const searchEl = document.getElementById("searchInput");
+  if (searchEl) {
+    searchEl.addEventListener("input", function() {
+      clearTimeout(_searchTimer);
+      _searchTimer = setTimeout(applyFilters, 400);
+    });
+  }
+
   document.getElementById("splash").style.display = "none";
   document.getElementById("app").style.display    = "flex";
   loadProjects();
 }
 
 /* ─── Data ─── */
-async function loadProjects() {
+async function loadProjects(queryString = "") {
   try {
-    const res = await fetchWithTimeout(API + "/api/v1/projects", {
+    const url = `${API_BASE}/projects${queryString ? "?" + queryString : ""}`;
+    const res = await fetchWithTimeout(url, {
       headers: { Authorization: "Bearer " + token },
     });
     if (!res.ok) throw new Error();
@@ -641,28 +751,141 @@ function renderProjList(filterStatus) {
     list.length ? list.map(rowH).join("") : emptyH("📂","ยังไม่มีโครงการ");
 }
 
-/* ─── Search ─── */
+/* ─── Search + Filters ─── */
 let _searchTimer = null;
 function onSearchInput() {
   clearTimeout(_searchTimer);
-  _searchTimer = setTimeout(doSearch, 400);
+  _searchTimer = setTimeout(applyFilters, 400);
 }
 
-async function doSearch() {
-  const q = document.getElementById("searchInput")?.value.trim() || "";
-  if (!q) { renderProjList(); return; }
+function applyFilters() {
+  const params = new URLSearchParams();
+  const search     = document.getElementById("searchInput")?.value.trim()     || "";
+  const company    = document.getElementById("filterCompany")?.value          || "";
+  const agencyType = document.getElementById("filterAgencyType")?.value       || "";
+  const province   = document.getElementById("filterProvince")?.value         || "";
+  if (search)     params.set("search",      search);
+  if (company)    params.set("company",     company);
+  if (agencyType) params.set("agency_type", agencyType);
+  if (province)   params.set("province",    province);
+  loadProjects(params.toString());
+}
+
+async function loadCompanyFilterOptions() {
   try {
-    const res = await fetchWithTimeout(
-      `${API}/api/v1/projects?search=${encodeURIComponent(q)}`,
-      { headers: { Authorization: "Bearer " + token } }
-    );
-    if (!res.ok) throw new Error();
-    const results = await res.json();
-    document.getElementById("projList").innerHTML = results.length
-      ? results.map(rowH).join("")
-      : emptyH("🔍", `ไม่พบหน่วยงาน "${q}"`);
+    const res = await fetchWithTimeout(`${API_BASE}/admin/companies`, {
+      headers: { Authorization: "Bearer " + token },
+    });
+    if (!res.ok) return;
+    const companies = await res.json();
+    const sel = document.getElementById("filterCompany");
+    if (!sel) return;
+    // Remove all except the first "ทุกบริษัท" option
+    while (sel.options.length > 1) sel.remove(1);
+    companies.forEach(c => {
+      const opt = document.createElement("option");
+      opt.value       = c.name;
+      opt.textContent = c.name;
+      sel.appendChild(opt);
+    });
+  } catch(e) {}
+}
+
+/* ─── Companies screen ─── */
+async function loadCompanies() {
+  try {
+    const res = await fetchWithTimeout(`${API_BASE}/admin/companies`, {
+      headers: { Authorization: "Bearer " + token },
+    });
+    if (!res.ok) {
+      document.getElementById("companiesList").innerHTML = emptyH("🔒","ไม่มีสิทธิ์เข้าถึง");
+      return;
+    }
+    renderCompaniesList(await res.json());
   } catch {
-    toast("ค้นหาไม่สำเร็จ");
+    document.getElementById("companiesList").innerHTML = emptyH("⚠️","โหลดไม่สำเร็จ");
+  }
+}
+
+function renderCompaniesList(companies) {
+  const isAdmin = currentUser?.role === "admin";
+  if (!companies.length) {
+    document.getElementById("companiesList").innerHTML = emptyH("🏢","ยังไม่มีบริษัท Dealer");
+    return;
+  }
+  document.getElementById("companiesList").innerHTML = companies.map(co => {
+    const typeColor = co.type === "vizzel"
+      ? { bg: "#dff0ff", color: "#007AFF" } : { bg: "#f3e5f5", color: "#6A1B9A" };
+    const typeLabel = co.type === "vizzel" ? "Vizzel" : "Dealer";
+    return `<div style="background:white;border-radius:12px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.07)">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:15px">${esc(co.name)}</div>
+          <div style="font-size:12px;color:#8e8e93;margin-top:4px">พนักงาน ${co.member_count || 0} คน</div>
+        </div>
+        <span style="background:${typeColor.bg};color:${typeColor.color};padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600;flex-shrink:0">${typeLabel}</span>
+      </div>
+      ${isAdmin && co.invite_code ? `
+        <div style="margin-top:10px;background:#f5f5f5;border-radius:8px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center">
+          <span style="font-weight:700;letter-spacing:2px;font-size:14px">${esc(co.invite_code)}</span>
+          <button onclick="copyCode('${esc(co.invite_code)}')"
+            style="background:none;border:1.5px solid #c7c7cc;border-radius:6px;padding:4px 12px;font-size:12px;cursor:pointer;font-family:inherit">
+            📋 คัดลอก
+          </button>
+        </div>` : ""}
+    </div>`;
+  }).join("");
+}
+
+function copyCode(code) {
+  navigator.clipboard?.writeText(code).catch(() => {});
+  toast("คัดลอก Invite Code: " + code + " ✓");
+}
+
+function openCreateCompanyModal() {
+  document.getElementById("createCompanyModal").style.display = "flex";
+  document.getElementById("newCompanyName").value    = "";
+  document.getElementById("newCompanyAddress").value = "";
+  document.getElementById("newCompanyTaxId").value   = "";
+  document.getElementById("createCompanyError").style.display = "none";
+}
+
+function closeCreateCompanyModal() {
+  document.getElementById("createCompanyModal").style.display = "none";
+}
+
+async function submitCreateCompany() {
+  const name = document.getElementById("newCompanyName").value.trim();
+  const errEl = document.getElementById("createCompanyError");
+  if (!name) {
+    errEl.textContent    = "กรุณากรอกชื่อบริษัท";
+    errEl.style.display  = "block";
+    return;
+  }
+  errEl.style.display = "none";
+  try {
+    const res = await fetchWithTimeout(`${API_BASE}/admin/companies`, {
+      method:  "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+      body:    JSON.stringify({
+        name,
+        address: document.getElementById("newCompanyAddress").value.trim(),
+        tax_id:  document.getElementById("newCompanyTaxId").value.trim(),
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      errEl.textContent   = data.error || "เกิดข้อผิดพลาด";
+      errEl.style.display = "block";
+      return;
+    }
+    closeCreateCompanyModal();
+    toast(`สร้างบริษัทสำเร็จ! Invite Code: ${data.invite_code}`);
+    loadCompanies();
+    loadCompanyFilterOptions();
+  } catch {
+    errEl.textContent   = "ไม่สามารถเชื่อมต่อได้";
+    errEl.style.display = "block";
   }
 }
 
@@ -1512,23 +1735,30 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function applyRoleMenuVisibility(role) {
-  const showMembers = role === "support" || role === "admin";
-  document.getElementById("menuMembers").style.display = showMembers ? "block" : "none";
-  document.getElementById("menuCompany").style.display = role === "admin"  ? "block" : "none";
+  const isSupportOrAdmin = role === "support" || role === "admin";
+  document.getElementById("menuMembers").style.display   = isSupportOrAdmin ? "block" : "none";
+  document.getElementById("menuCompanies").style.display = isSupportOrAdmin ? "block" : "none";
+  document.getElementById("menuCompany").style.display   = role === "admin"  ? "block" : "none";
 }
 
 function showProfileScreen(name) {
   document.getElementById("profileDropdown").style.display = "none";
-  ["profile","members","company"].forEach(s => {
+  ["profile","members","companies","company"].forEach(s => {
     document.getElementById("screen-" + s).style.display = "none";
   });
-  const titles = { profile: "ข้อมูลส่วนตัว", members: "ข้อมูลพนักงาน", company: "ข้อมูลบริษัท" };
+  const titles = {
+    profile:   "ข้อมูลส่วนตัว",
+    members:   "ข้อมูลพนักงาน",
+    companies: "บริษัท Dealer",
+    company:   "ข้อมูลบริษัทเรา",
+  };
   document.getElementById("profileOverlayTitle").textContent = titles[name] || "";
   document.getElementById("screen-" + name).style.display = "block";
   document.getElementById("profileOverlay").style.display  = "block";
-  if (name === "profile")  loadMe();
-  else if (name === "members") loadMembers();
-  else if (name === "company") loadCompany();
+  if      (name === "profile")   loadMe();
+  else if (name === "members")   loadMembers();
+  else if (name === "companies") loadCompanies();
+  else if (name === "company")   loadCompany();
 }
 
 function hideProfileOverlay() {
