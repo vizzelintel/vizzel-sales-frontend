@@ -191,6 +191,63 @@
   <div class="splash-spinner"></div>
 </div>
 
+<!-- ── Register ── -->
+<div id="register" style="display:none;min-height:100vh;background:#f2f2f7;padding:24px 16px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+  <div style="max-width:480px;margin:0 auto">
+    <div style="text-align:center;margin-bottom:28px">
+      <div style="font-size:48px;margin-bottom:10px">📋</div>
+      <div style="font-size:22px;font-weight:700;margin-bottom:6px">ลงทะเบียนใช้งาน</div>
+      <div style="font-size:13px;color:#8e8e93">กรอกข้อมูลเพื่อเริ่มต้นใช้งาน Vizzel Sales</div>
+    </div>
+    <div style="background:white;border-radius:16px;padding:24px;box-shadow:0 1px 4px rgba(0,0,0,.08)">
+      <div style="margin-bottom:14px">
+        <label style="font-size:13px;color:#636366;font-weight:600;display:block;margin-bottom:6px">ชื่อ *</label>
+        <input id="regFirstName" type="text" placeholder="ชื่อจริง"
+          style="width:100%;padding:11px 12px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;outline:none;box-sizing:border-box">
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="font-size:13px;color:#636366;font-weight:600;display:block;margin-bottom:6px">นามสกุล *</label>
+        <input id="regLastName" type="text" placeholder="นามสกุล"
+          style="width:100%;padding:11px 12px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;outline:none;box-sizing:border-box">
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="font-size:13px;color:#636366;font-weight:600;display:block;margin-bottom:6px">เบอร์โทร</label>
+        <input id="regPhone" type="tel" placeholder="0812345678"
+          style="width:100%;padding:11px 12px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;outline:none;box-sizing:border-box">
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="font-size:13px;color:#636366;font-weight:600;display:block;margin-bottom:6px">Email</label>
+        <input id="regEmail" type="email" placeholder="example@email.com"
+          style="width:100%;padding:11px 12px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;outline:none;box-sizing:border-box">
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="font-size:13px;color:#636366;font-weight:600;display:block;margin-bottom:6px">ภูมิภาค</label>
+        <select id="regRegion"
+          style="width:100%;padding:11px 12px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;outline:none;appearance:none;background:white;box-sizing:border-box">
+          <option value="">-- เลือกภูมิภาค --</option>
+          <option value="ภาคเหนือ">ภาคเหนือ</option>
+          <option value="ภาคกลาง">ภาคกลาง</option>
+          <option value="ภาคตะวันออกเฉียงเหนือ">ภาคตะวันออกเฉียงเหนือ</option>
+          <option value="ภาคตะวันออก">ภาคตะวันออก</option>
+          <option value="ภาคตะวันตก">ภาคตะวันตก</option>
+          <option value="ภาคใต้">ภาคใต้</option>
+        </select>
+      </div>
+      <div style="margin-bottom:20px">
+        <label style="font-size:13px;color:#636366;font-weight:600;display:block;margin-bottom:6px">Invite Code *</label>
+        <input id="regInviteCode" type="text" placeholder="XXX-0000" autocomplete="off" autocapitalize="characters"
+          style="width:100%;padding:11px 12px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;outline:none;box-sizing:border-box;letter-spacing:2px;text-transform:uppercase">
+        <div id="regInviteStatus" style="margin-top:6px;font-size:12px;min-height:18px"></div>
+      </div>
+      <div id="regError" style="color:#FF3B30;font-size:13px;margin-bottom:14px;display:none"></div>
+      <button id="regSubmitBtn" onclick="submitRegister()"
+        style="width:100%;background:#06C755;color:white;border:none;padding:14px;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit">
+        ลงทะเบียน
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- ── App ── -->
 <div id="app">
   <div class="hdr">
@@ -500,6 +557,9 @@ let token    = "";
 let projects = [];
 let curTab   = "pipeline";
 let prevTab  = "pipeline";
+let pendingLineId      = "";
+let pendingDisplayName = "";
+let pendingPictureUrl  = "";
 let detailProjectID = "";
 let currentProject  = null;
 let currentDocs     = [];
@@ -648,6 +708,17 @@ async function initLiff() {
       body:    JSON.stringify({ access_token: lineToken, email }),
     }, 10000);
 
+    if (authRes.status === 401) {
+      const authData = await authRes.json();
+      if (authData.error === "user_not_found") {
+        pendingLineId      = authData.line_id      || "";
+        pendingDisplayName = authData.display_name || "";
+        pendingPictureUrl  = authData.picture_url  || "";
+        showRegister();
+        return;
+      }
+      throw new Error("auth failed 401");
+    }
     if (!authRes.ok) throw new Error("auth failed " + authRes.status);
     const authData = await authRes.json();
     token = authData.token;
@@ -667,6 +738,109 @@ async function initLiff() {
           ลองใหม่
         </button>
       </div>`;
+  }
+}
+
+function showRegister() {
+  document.getElementById("splash").style.display    = "none";
+  document.getElementById("app").style.display       = "none";
+  document.getElementById("register").style.display  = "block";
+
+  // Pre-fill name from LINE display_name (best-effort split)
+  if (pendingDisplayName) {
+    const parts = pendingDisplayName.trim().split(/\s+/);
+    document.getElementById("regFirstName").value = parts[0] || "";
+    document.getElementById("regLastName").value  = parts.slice(1).join(" ") || "";
+  }
+
+  // Wire up invite code blur validation
+  const invInput = document.getElementById("regInviteCode");
+  invInput.addEventListener("blur", validateInviteCode);
+  invInput.addEventListener("input", () => {
+    document.getElementById("regInviteStatus").textContent = "";
+    document.getElementById("regInviteStatus").style.color = "";
+  });
+}
+
+async function validateInviteCode() {
+  const code = document.getElementById("regInviteCode").value.trim().toUpperCase();
+  const statusEl = document.getElementById("regInviteStatus");
+  if (!code) { statusEl.textContent = ""; return; }
+
+  statusEl.textContent = "กำลังตรวจสอบ...";
+  statusEl.style.color = "#8e8e93";
+  try {
+    const res = await fetch(`${API_BASE}/auth/validate-invite?code=${encodeURIComponent(code)}`);
+    if (res.ok) {
+      const data = await res.json();
+      statusEl.textContent = "บริษัท: " + data.company_name;
+      statusEl.style.color = "#34C759";
+    } else {
+      const data = await res.json().catch(() => ({}));
+      statusEl.textContent = data.error || "invite code ไม่ถูกต้อง";
+      statusEl.style.color = "#FF3B30";
+    }
+  } catch(e) {
+    statusEl.textContent = "ตรวจสอบไม่ได้ กรุณาลองใหม่";
+    statusEl.style.color = "#FF3B30";
+  }
+}
+
+async function submitRegister() {
+  const firstName  = document.getElementById("regFirstName").value.trim();
+  const lastName   = document.getElementById("regLastName").value.trim();
+  const phone      = document.getElementById("regPhone").value.trim();
+  const email      = document.getElementById("regEmail").value.trim();
+  const region     = document.getElementById("regRegion").value;
+  const inviteCode = document.getElementById("regInviteCode").value.trim().toUpperCase();
+  const errEl      = document.getElementById("regError");
+  const btn        = document.getElementById("regSubmitBtn");
+
+  errEl.style.display = "none";
+  if (!firstName) { errEl.textContent = "กรุณากรอกชื่อ"; errEl.style.display = "block"; return; }
+  if (!lastName)  { errEl.textContent = "กรุณากรอกนามสกุล"; errEl.style.display = "block"; return; }
+  if (!inviteCode){ errEl.textContent = "กรุณากรอก Invite Code"; errEl.style.display = "block"; return; }
+
+  btn.disabled = true;
+  btn.textContent = "กำลังลงทะเบียน...";
+
+  try {
+    const res = await fetchWithTimeout(`${API_BASE}/auth/register`, {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        line_id:      pendingLineId,
+        display_name: pendingDisplayName,
+        picture_url:  pendingPictureUrl,
+        first_name:   firstName,
+        last_name:    lastName,
+        phone, email, region,
+        invite_code:  inviteCode,
+      }),
+    }, 15000);
+
+    const data = await res.json();
+    if (!res.ok) {
+      errEl.textContent = data.error || "ลงทะเบียนไม่สำเร็จ";
+      errEl.style.display = "block";
+      btn.disabled = false;
+      btn.textContent = "ลงทะเบียน";
+      return;
+    }
+
+    token = data.token;
+    localStorage.setItem("vizzel_token", token);
+    document.getElementById("register").style.display = "none";
+
+    const ok = await loadCurrentUser();
+    if (!ok) throw new Error("load user failed");
+    initApp();
+
+  } catch(e) {
+    errEl.textContent = "เกิดข้อผิดพลาด: " + e.message;
+    errEl.style.display = "block";
+    btn.disabled = false;
+    btn.textContent = "ลงทะเบียน";
   }
 }
 
