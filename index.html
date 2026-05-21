@@ -87,6 +87,17 @@
     .pdrop-item mark { background: #fef3c7; color: #1c1c1e; font-weight: 700; padding: 0 1px; border-radius: 2px; font-style: normal; }
     .pdrop-empty { padding: 16px; font-size: 14px; color: #8e8e93; text-align: center; }
 
+    /* ── Reusable province search component ── */
+    .province-wrapper { position: relative; }
+    .province-input   { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd;
+                        font-size: 14px; box-sizing: border-box; font-family: inherit; outline: none; }
+    .province-dropdown { display: none; position: absolute; top: 100%; left: 0; right: 0;
+                         background: white; border: 1px solid #ddd; border-radius: 8px;
+                         max-height: 200px; overflow-y: auto; z-index: 999;
+                         box-shadow: 0 4px 12px rgba(0,0,0,.15); }
+    .province-option  { padding: 10px 14px; cursor: pointer; font-size: 14px; color: #1c1c1e; }
+    .province-option:hover, .province-option.highlighted { background: #e4f9ec; }
+
     /* ── Detail ── */
     .dcard { background: white; border-radius: 12px; overflow: hidden; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.07); }
     .drow  { display: flex; padding: 12px 14px; border-bottom: 1px solid #f2f2f7; }
@@ -250,36 +261,12 @@
           <option>โรงพยาบาลทั่วไป</option><option>โรงพยาบาลชุมชน</option>
           <option>โรงพยาบาลเอกชน</option><option>บริษัทเอกชน</option>
         </select>
-        <select id="filterProvince" onchange="applyFilters()"
-          style="padding:8px 10px;border-radius:8px;border:1.5px solid #e5e5ea;font-size:13px;font-family:inherit;outline:none;background:white">
-          <option value="">ทุกจังหวัด</option>
-          <option>กระบี่</option><option>กรุงเทพมหานคร</option><option>กาญจนบุรี</option>
-          <option>กาฬสินธุ์</option><option>กำแพงเพชร</option><option>ขอนแก่น</option>
-          <option>จันทบุรี</option><option>ฉะเชิงเทรา</option><option>ชลบุรี</option>
-          <option>ชัยนาท</option><option>ชัยภูมิ</option><option>ชุมพร</option>
-          <option>เชียงราย</option><option>เชียงใหม่</option><option>ตรัง</option>
-          <option>ตราด</option><option>ตาก</option><option>นครนายก</option>
-          <option>นครปฐม</option><option>นครพนม</option><option>นครราชสีมา</option>
-          <option>นครศรีธรรมราช</option><option>นครสวรรค์</option><option>นนทบุรี</option>
-          <option>นราธิวาส</option><option>น่าน</option><option>บึงกาฬ</option>
-          <option>บุรีรัมย์</option><option>ปทุมธานี</option><option>ประจวบคีรีขันธ์</option>
-          <option>ปราจีนบุรี</option><option>ปัตตานี</option><option>พระนครศรีอยุธยา</option>
-          <option>พะเยา</option><option>พังงา</option><option>พัทลุง</option>
-          <option>พิจิตร</option><option>พิษณุโลก</option><option>เพชรบุรี</option>
-          <option>เพชรบูรณ์</option><option>แพร่</option><option>ภูเก็ต</option>
-          <option>มหาสารคาม</option><option>มุกดาหาร</option><option>แม่ฮ่องสอน</option>
-          <option>ยโสธร</option><option>ยะลา</option><option>ร้อยเอ็ด</option>
-          <option>ระนอง</option><option>ระยอง</option><option>ราชบุรี</option>
-          <option>ลพบุรี</option><option>ลำปาง</option><option>ลำพูน</option>
-          <option>เลย</option><option>ศรีสะเกษ</option><option>สกลนคร</option>
-          <option>สงขลา</option><option>สตูล</option><option>สมุทรปราการ</option>
-          <option>สมุทรสงคราม</option><option>สมุทรสาคร</option><option>สระแก้ว</option>
-          <option>สระบุรี</option><option>สิงห์บุรี</option><option>สุโขทัย</option>
-          <option>สุพรรณบุรี</option><option>สุราษฎร์ธานี</option><option>สุรินทร์</option>
-          <option>หนองคาย</option><option>หนองบัวลำภู</option><option>อ่างทอง</option>
-          <option>อำนาจเจริญ</option><option>อุดรธานี</option><option>อุตรดิตถ์</option>
-          <option>อุทัยธานี</option><option>อุบลราชธานี</option>
-        </select>
+        <div class="province-wrapper">
+          <input type="text" id="filterProvince" class="province-input"
+            placeholder="🔍 ค้นหาจังหวัด..." autocomplete="off"
+            style="padding:8px 12px;border-radius:8px;border:1.5px solid #e5e5ea;font-size:13px;width:160px;">
+          <div id="filterProvinceDropdown" class="province-dropdown"></div>
+        </div>
       </div>
 
       <div class="plist" id="projList"></div>
@@ -473,36 +460,12 @@
       </div>
       <div style="margin-bottom:14px">
         <label style="font-size:13px;color:#636366;font-weight:600">จังหวัด</label>
-        <select id="newProvince"
-          style="width:100%;padding:10px 12px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;margin-top:6px;outline:none;box-sizing:border-box;appearance:none;background:white">
-          <option value="">-- เลือกจังหวัด --</option>
-          <option>กระบี่</option><option>กรุงเทพมหานคร</option><option>กาญจนบุรี</option>
-          <option>กาฬสินธุ์</option><option>กำแพงเพชร</option><option>ขอนแก่น</option>
-          <option>จันทบุรี</option><option>ฉะเชิงเทรา</option><option>ชลบุรี</option>
-          <option>ชัยนาท</option><option>ชัยภูมิ</option><option>ชุมพร</option>
-          <option>เชียงราย</option><option>เชียงใหม่</option><option>ตรัง</option>
-          <option>ตราด</option><option>ตาก</option><option>นครนายก</option>
-          <option>นครปฐม</option><option>นครพนม</option><option>นครราชสีมา</option>
-          <option>นครศรีธรรมราช</option><option>นครสวรรค์</option><option>นนทบุรี</option>
-          <option>นราธิวาส</option><option>น่าน</option><option>บึงกาฬ</option>
-          <option>บุรีรัมย์</option><option>ปทุมธานี</option><option>ประจวบคีรีขันธ์</option>
-          <option>ปราจีนบุรี</option><option>ปัตตานี</option><option>พระนครศรีอยุธยา</option>
-          <option>พะเยา</option><option>พังงา</option><option>พัทลุง</option>
-          <option>พิจิตร</option><option>พิษณุโลก</option><option>เพชรบุรี</option>
-          <option>เพชรบูรณ์</option><option>แพร่</option><option>ภูเก็ต</option>
-          <option>มหาสารคาม</option><option>มุกดาหาร</option><option>แม่ฮ่องสอน</option>
-          <option>ยโสธร</option><option>ยะลา</option><option>ร้อยเอ็ด</option>
-          <option>ระนอง</option><option>ระยอง</option><option>ราชบุรี</option>
-          <option>ลพบุรี</option><option>ลำปาง</option><option>ลำพูน</option>
-          <option>เลย</option><option>ศรีสะเกษ</option><option>สกลนคร</option>
-          <option>สงขลา</option><option>สตูล</option><option>สมุทรปราการ</option>
-          <option>สมุทรสงคราม</option><option>สมุทรสาคร</option><option>สระแก้ว</option>
-          <option>สระบุรี</option><option>สิงห์บุรี</option><option>สุโขทัย</option>
-          <option>สุพรรณบุรี</option><option>สุราษฎร์ธานี</option><option>สุรินทร์</option>
-          <option>หนองคาย</option><option>หนองบัวลำภู</option><option>อ่างทอง</option>
-          <option>อำนาจเจริญ</option><option>อุดรธานี</option><option>อุตรดิตถ์</option>
-          <option>อุทัยธานี</option><option>อุบลราชธานี</option>
-        </select>
+        <div class="province-wrapper" style="margin-top:6px">
+          <input type="text" id="newProvince" class="province-input"
+            placeholder="พิมพ์เพื่อค้นหาจังหวัด..." autocomplete="off"
+            style="border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;padding:10px 12px;">
+          <div id="newProvinceDropdown" class="province-dropdown"></div>
+        </div>
       </div>
       <div style="margin-bottom:14px">
         <label style="font-size:13px;color:#636366;font-weight:600">ผู้ติดต่อ</label>
@@ -584,6 +547,63 @@ const DOC_TYPES_SEQ = ["quotation_support","tor_support","contract","closing"];
 
 /* Statuses that trigger a Google Calendar appointment */
 const APPT_STATUSES = new Set(["present","demo","site_survey"]);
+
+/* ─── Province search component ─── */
+const ALL_PROVINCES = [
+  'กระบี่','กรุงเทพมหานคร','กาญจนบุรี','กาฬสินธุ์','กำแพงเพชร',
+  'ขอนแก่น','จันทบุรี','ฉะเชิงเทรา','ชลบุรี','ชัยนาท',
+  'ชัยภูมิ','ชุมพร','เชียงราย','เชียงใหม่','ตรัง',
+  'ตราด','ตาก','นครนายก','นครปฐม','นครพนม',
+  'นครราชสีมา','นครศรีธรรมราช','นครสวรรค์','นนทบุรี','นราธิวาส',
+  'น่าน','บึงกาฬ','บุรีรัมย์','ปทุมธานี','ประจวบคีรีขันธ์',
+  'ปราจีนบุรี','ปัตตานี','พระนครศรีอยุธยา','พะเยา','พังงา',
+  'พัทลุง','พิจิตร','พิษณุโลก','เพชรบุรี','เพชรบูรณ์',
+  'แพร่','ภูเก็ต','มหาสารคาม','มุกดาหาร','แม่ฮ่องสอน',
+  'ยโสธร','ยะลา','ร้อยเอ็ด','ระนอง','ระยอง',
+  'ราชบุรี','ลพบุรี','ลำปาง','ลำพูน','เลย',
+  'ศรีสะเกษ','สกลนคร','สงขลา','สตูล','สมุทรปราการ',
+  'สมุทรสงคราม','สมุทรสาคร','สระแก้ว','สระบุรี','สิงห์บุรี',
+  'สุโขทัย','สุพรรณบุรี','สุราษฎร์ธานี','สุรินทร์','หนองคาย',
+  'หนองบัวลำภู','อ่างทอง','อำนาจเจริญ','อุดรธานี','อุตรดิตถ์',
+  'อุทัยธานี','อุบลราชธานี',
+];
+
+const provinceCallbacks = {};
+
+function createProvinceSearch(inputId, dropdownId, onSelect) {
+  if (typeof onSelect === "function") provinceCallbacks[dropdownId] = onSelect;
+  const input    = document.getElementById(inputId);
+  const dropdown = document.getElementById(dropdownId);
+  if (!input || !dropdown) return;
+
+  function renderOptions(filter) {
+    const list = filter
+      ? ALL_PROVINCES.filter(p => p.includes(filter))
+      : ALL_PROVINCES;
+    dropdown.innerHTML = list.map(p =>
+      `<div class="province-option" onclick="selectProvince('${inputId}','${dropdownId}','${p}')">${p}</div>`
+    ).join("");
+    dropdown.style.display = list.length ? "block" : "none";
+  }
+
+  input.addEventListener("input",  function() { renderOptions(this.value.trim()); });
+  input.addEventListener("focus",  function() { renderOptions(this.value.trim()); });
+  // Close on outside click — use capture to beat stopPropagation
+  document.addEventListener("click", function(e) {
+    if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+      dropdown.style.display = "none";
+    }
+  }, true);
+}
+
+function selectProvince(inputId, dropdownId, province) {
+  const inp  = document.getElementById(inputId);
+  const drop = document.getElementById(dropdownId);
+  if (inp)  inp.value = province;
+  if (drop) drop.style.display = "none";
+  const cb = provinceCallbacks[dropdownId];
+  if (typeof cb === "function") cb(province);
+}
 
 /* ─── Init ─── */
 async function initLiff() {
@@ -905,6 +925,10 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("createModal").addEventListener("click", function(e) {
     if (e.target === this) closeCreateModal();
   });
+
+  // Initialize province search components
+  createProvinceSearch("filterProvince",  "filterProvinceDropdown",  applyFilters);
+  createProvinceSearch("newProvince",     "newProvinceDropdown",     null);
 
   // Refresh document list when upload tab posts UPLOAD_SUCCESS back to this window
   window.addEventListener("message", function(event) {
