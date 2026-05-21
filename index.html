@@ -426,7 +426,27 @@
       </div>
       <div style="margin-bottom:12px">
         <label style="font-size:13px;color:#636366;font-weight:600">Email</label>
-        <input id="editEmail" type="email" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;margin-top:6px;outline:none;box-sizing:border-box">
+        <input id="editEmail" type="email" oninput="onProfileEmailInput()"
+          style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;margin-top:6px;outline:none;box-sizing:border-box">
+        <div id="profileEmailVerifiedBadge" style="display:none;margin-top:6px;font-size:12px;color:#34C759;font-weight:600">✓ ยืนยันอีเมลแล้ว</div>
+      </div>
+      <div id="profileEmailOtpBox" style="display:none;margin-bottom:12px;padding:14px;border-radius:10px;background:#f9f9fb;border:1.5px solid #e5e5ea">
+        <div style="font-size:12px;color:#636366;margin-bottom:10px;line-height:1.4">
+          เปลี่ยนอีเมลต้องยืนยัน OTP ก่อนกดบันทึก
+        </div>
+        <button id="profileSendOtpBtn" type="button" onclick="profileSendOTP()"
+          style="width:100%;background:#06C755;color:white;border:none;padding:11px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:10px">
+          ส่งรหัส OTP
+        </button>
+        <label style="font-size:13px;color:#636366;font-weight:600;display:block;margin-bottom:6px">OTP 6 หลัก</label>
+        <input id="profileOtpInput" type="text" maxlength="6" placeholder="123456"
+          style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;margin-bottom:10px;outline:none;box-sizing:border-box;letter-spacing:3px">
+        <button id="profileConfirmOtpBtn" type="button" onclick="profileConfirmOTP()"
+          style="width:100%;background:#007AFF;color:white;border:none;padding:11px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">
+          ยืนยันอีเมล
+        </button>
+        <div id="profileEmailHint" style="margin-top:8px;font-size:12px;color:#8e8e93;line-height:1.4"></div>
+        <div id="profileEmailError" style="margin-top:8px;color:#FF3B30;font-size:12px;display:none"></div>
       </div>
       <div style="margin-bottom:20px">
         <label style="font-size:13px;color:#636366;font-weight:600">ภูมิภาค</label>
@@ -2325,14 +2345,132 @@ function logout() {
 }
 
 /* ─── Profile: ข้อมูลส่วนตัว ─── */
+let profileSavedEmail = "";
+let profileEmailVerifiedForInput = true;
+
+function normalizeEmail(e) {
+  return (e || "").trim().toLowerCase();
+}
+
+function onProfileEmailInput() {
+  const email = document.getElementById("editEmail").value.trim();
+  const changed = normalizeEmail(email) !== normalizeEmail(profileSavedEmail);
+  profileEmailVerifiedForInput = !changed;
+  const otpBox = document.getElementById("profileEmailOtpBox");
+  const badge = document.getElementById("profileEmailVerifiedBadge");
+  const errEl = document.getElementById("profileEmailError");
+  errEl.style.display = "none";
+  if (changed) {
+    otpBox.style.display = "block";
+    badge.style.display = "none";
+    document.getElementById("profileEmailHint").textContent =
+      "ระบบจะส่งรหัส OTP ไปยังอีเมลใหม่ — ยืนยันก่อนจึงบันทึกโปรไฟล์ได้";
+  } else {
+    otpBox.style.display = "none";
+    document.getElementById("profileOtpInput").value = "";
+    if (currentUser?.email_verified && email) {
+      badge.style.display = "block";
+    } else {
+      badge.style.display = "none";
+    }
+  }
+}
+
+async function profileSendOTP() {
+  const email = document.getElementById("editEmail").value.trim();
+  const errEl = document.getElementById("profileEmailError");
+  const hintEl = document.getElementById("profileEmailHint");
+  const btn = document.getElementById("profileSendOtpBtn");
+  errEl.style.display = "none";
+  if (!email) {
+    errEl.textContent = "กรุณากรอกอีเมล";
+    errEl.style.display = "block";
+    return;
+  }
+  if (Date.now() < verifyCooldownUntil) {
+    errEl.textContent = "กรุณารอสักครู่ก่อนส่งรหัสใหม่";
+    errEl.style.display = "block";
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = "กำลังส่ง...";
+  try {
+    const res = await fetchWithTimeout(`${API_BASE}/auth/email/send-otp`, {
+      method: "POST",
+      headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    }, 10000);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      errEl.textContent = data.error || "ส่งรหัสไม่สำเร็จ";
+      errEl.style.display = "block";
+    } else {
+      verifyCooldownUntil = Date.now() + 60000;
+      profileEmailVerifiedForInput = false;
+      hintEl.textContent = "ส่ง OTP แล้ว กรุณาตรวจอีเมลและกดยืนยัน";
+      if (data.debug_otp) hintEl.textContent += ` (DEV: ${data.debug_otp})`;
+      toast("ส่ง OTP สำเร็จ ✓");
+    }
+  } catch {
+    errEl.textContent = "ไม่สามารถเชื่อมต่อได้";
+    errEl.style.display = "block";
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "ส่งรหัส OTP";
+  }
+}
+
+async function profileConfirmOTP() {
+  const email = document.getElementById("editEmail").value.trim();
+  const otp = document.getElementById("profileOtpInput").value.trim();
+  const errEl = document.getElementById("profileEmailError");
+  const btn = document.getElementById("profileConfirmOtpBtn");
+  errEl.style.display = "none";
+  if (!email || !otp) {
+    errEl.textContent = "กรุณากรอกอีเมลและ OTP";
+    errEl.style.display = "block";
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = "กำลังยืนยัน...";
+  try {
+    const res = await fetchWithTimeout(`${API_BASE}/auth/email/verify-otp`, {
+      method: "POST",
+      headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
+      body: JSON.stringify({ email, otp }),
+    }, 10000);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      errEl.textContent = data.error || "ยืนยันไม่สำเร็จ";
+      errEl.style.display = "block";
+      return;
+    }
+    profileSavedEmail = email;
+    profileEmailVerifiedForInput = true;
+    document.getElementById("profileOtpInput").value = "";
+    document.getElementById("profileEmailOtpBox").style.display = "none";
+    document.getElementById("profileEmailVerifiedBadge").style.display = "block";
+    await loadCurrentUser();
+    toast("ยืนยันอีเมลสำเร็จ ✓");
+  } catch (e) {
+    errEl.textContent = "เกิดข้อผิดพลาด: " + (e.message || "ไม่สามารถเชื่อมต่อได้");
+    errEl.style.display = "block";
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "ยืนยันอีเมล";
+  }
+}
+
 async function loadMe() {
   try {
-    const res = await fetchWithTimeout(API + "/api/v1/me", {
+    const res = await fetchWithTimeout(`${API_BASE}/me`, {
       headers: { Authorization: "Bearer " + token },
     });
     if (!res.ok) return;
     const u = await res.json();
     currentUser = u;
+    profileSavedEmail = u.email || "";
+    profileEmailVerifiedForInput = true;
     document.getElementById("profileCompanyDisplay").textContent = u.company_name || "-";
     document.getElementById("profileRoleDisplay").textContent    = u.role         || "-";
     document.getElementById("profileRegionDisplay").textContent  = u.region       || "-";
@@ -2342,19 +2480,29 @@ async function loadMe() {
     document.getElementById("editEmail").value     = u.email      || "";
     const regionSel = document.getElementById("editRegion");
     if (u.region) regionSel.value = u.region;
+    document.getElementById("profileEmailOtpBox").style.display = "none";
+    document.getElementById("profileEmailError").style.display = "none";
+    document.getElementById("profileEmailVerifiedBadge").style.display =
+      (u.email_verified && u.email) ? "block" : "none";
   } catch(e) {}
 }
 
 async function saveProfile() {
+  const email = document.getElementById("editEmail").value.trim();
+  const emailChanged = normalizeEmail(email) !== normalizeEmail(profileSavedEmail);
+  if (emailChanged && !profileEmailVerifiedForInput) {
+    toast("เปลี่ยนอีเมลต้องกดส่ง OTP และยืนยันก่อนบันทึก");
+    document.getElementById("profileEmailOtpBox").style.display = "block";
+    return;
+  }
   const body = {
     first_name: document.getElementById("editFirstName").value.trim(),
     last_name:  document.getElementById("editLastName").value.trim(),
     phone:      document.getElementById("editPhone").value.trim(),
-    email:      document.getElementById("editEmail").value.trim(),
     region:     document.getElementById("editRegion").value,
   };
   try {
-    const res = await fetchWithTimeout(API + "/api/v1/me", {
+    const res = await fetchWithTimeout(`${API_BASE}/me`, {
       method: "PUT",
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
       body: JSON.stringify(body),
