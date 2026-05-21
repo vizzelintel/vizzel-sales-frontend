@@ -83,8 +83,6 @@
     select.finp { appearance: none; -webkit-appearance: none; }
 
     /* ── Province searchable dropdown ── */
-    #province-drop { position: fixed; background: white; border-radius: 12px; box-shadow: 0 6px 24px rgba(0,0,0,.18); max-height: 248px; overflow-y: auto; -webkit-overflow-scrolling: touch; z-index: 600; display: none; }
-    #province-drop.open { display: block; }
     .pdrop-item { padding: 13px 16px; font-size: 15px; cursor: pointer; border-bottom: 1px solid #f2f2f7; color: #1c1c1e; }
     .pdrop-item:last-child { border-bottom: none; }
     .pdrop-item:active { background: #f5f5f5; }
@@ -199,7 +197,7 @@
   <p class="splash-sub">ระบบจัดการลูกค้า<br>หน่วยงานราชการ</p>
   <div class="splash-spinner" id="splashSpinner"></div>
   <p id="splashStatus" style="font-size:13px;color:#8e8e93;margin-top:12px">กำลังโหลด...</p>
-  <p id="splashVersion" style="font-size:11px;color:#c7c7cc;margin-top:6px">v20260521f</p>
+  <p id="splashVersion" style="font-size:11px;color:#c7c7cc;margin-top:6px">v20260521g</p>
   <p id="splashErr" class="splash-err" style="display:none"></p>
   <button id="splashRetry" type="button" style="display:none;margin-top:14px;background:#06C755;color:white;border:none;padding:12px 28px;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit"
     onclick="localStorage.removeItem('vizzel_token');try{liff.logout();}catch(e){}window.location.reload();">ลองใหม่</button>
@@ -427,7 +425,6 @@
   </div>
 </div>
 
-<div id="province-drop"></div>
 <div class="toast" id="toast"></div>
 
 <!-- ── Profile overlay (full-screen, z-index above everything) ── -->
@@ -649,11 +646,11 @@
   </div>
 </div>
 
-<script>/* build 20260521e */
+<script>/* build 20260521g */
 const FRONTEND_BASE_URL = "https://vizzelintel.github.io/vizzel-sales-frontend/";
 const LIFF_ID           = "2010133685-tke1EWht";
 const LIFF_OPEN_URL     = "https://liff.line.me/" + LIFF_ID;
-const APP_BOOT_VERSION  = "20260521e";
+const APP_BOOT_VERSION  = "20260521g";
 const API               = "https://vizzel-sales-api.fly.dev";
 const API_BASE          = API + "/api/v1";
 
@@ -668,8 +665,9 @@ let directoryProjects = [];
 let directoryTotal = 0;
 let directoryPage = 1;
 let directoryTotalPages = 1;
-let listStatusFilter = "";
 let pipelineListStatusFilter = "";
+let _pendingStatus    = "";
+let _pendingProjectID = "";
 const PROJECTS_PER_PAGE = 10;
 const PIPELINE_RECENT_LIMIT = 10;
 let curTab   = "pipeline";
@@ -1025,7 +1023,7 @@ async function validateInviteCode() {
   statusEl.textContent = "กำลังตรวจสอบ...";
   statusEl.style.color = "#8e8e93";
   try {
-    const res = await fetch(`${API_BASE}/auth/validate-invite?code=${encodeURIComponent(code)}`);
+    const res = await fetchWithTimeout(`${API_BASE}/auth/validate-invite?code=${encodeURIComponent(code)}`);
     if (res.ok) {
       const data = await res.json();
       statusEl.textContent = "บริษัท: " + data.company_name;
@@ -1415,11 +1413,6 @@ function clearPipelineStatusFilter() {
   loadPipeline();
 }
 
-function clearListStatusFilter() {
-  listStatusFilter = "";
-  directoryPage = 1;
-}
-
 /* ─── Project list ─── */
 function renderProjList() {
   const header = `<div class="prow prow-static" style="background:#f9f9fb;font-size:11px;font-weight:600;color:#8e8e93">
@@ -1802,7 +1795,7 @@ document.addEventListener("DOMContentLoaded", () => {
     btn.disabled    = true;
 
     try {
-      const res = await fetchWithTimeout(API + "/api/v1/projects", {
+      const res = await fetchWithTimeout(`${API_BASE}/projects`, {
         method:  "POST",
         headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1885,7 +1878,7 @@ async function showDetail(id) {
   let p = findLocalProject(id);
   if (!p) {
     try {
-      const res = await fetchWithTimeout(`${API}/api/v1/projects/${id}`, {
+      const res = await fetchWithTimeout(`${API_BASE}/projects/${id}`, {
         headers: { Authorization: "Bearer " + token },
       });
       if (res.ok) {
@@ -2155,7 +2148,7 @@ async function saveProjectInfo() {
   };
 
   try {
-    const res = await fetchWithTimeout(`${API}/api/v1/projects/${p.id}`, {
+    const res = await fetchWithTimeout(`${API_BASE}/projects/${p.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
       body: JSON.stringify(body),
@@ -2324,7 +2317,7 @@ async function saveNote() {
   if (!projectId) return;
 
   try {
-    const res = await fetchWithTimeout(`${API}/api/v1/projects/${projectId}`, {
+    const res = await fetchWithTimeout(`${API_BASE}/projects/${projectId}`, {
       method:  "PUT",
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
       body:    JSON.stringify({ detail_note: note }),
@@ -2356,7 +2349,7 @@ async function saveNote() {
 
 async function fetchProjectDocs(projectID) {
   try {
-    const res = await fetchWithTimeout(`${API}/api/v1/projects/${projectID}/documents`, {
+    const res = await fetchWithTimeout(`${API_BASE}/projects/${projectID}/documents`, {
       headers: { Authorization: "Bearer " + token },
     });
     return res.ok ? await res.json() : [];
@@ -2365,7 +2358,7 @@ async function fetchProjectDocs(projectID) {
 
 async function fetchProjectAppointments(projectID) {
   try {
-    const res = await fetchWithTimeout(`${API}/api/v1/projects/${projectID}/appointments`, {
+    const res = await fetchWithTimeout(`${API_BASE}/projects/${projectID}/appointments`, {
       headers: { Authorization: "Bearer " + token },
     });
     const list = res.ok ? await res.json() : [];
@@ -2747,41 +2740,6 @@ function openRetroUpload(docType) {
   openDocUpload(currentProject.id, docType);
 }
 
-// Maps project status to the doc_type that should be uploaded next.
-// Returns null for statuses where ad-hoc upload is not applicable.
-function getDocTypeForStatus(status) {
-  const staff = isStaffRole(currentUser?.role || "dealer");
-  const map = staff
-    ? { present: "quotation_support", quotation: "tor_support", tor: "contract", contract: "closing" }
-    : { present: "quotation_dealer", quotation: "tor_dealer", tor: "contract" };
-  return map[status] || null;
-}
-
-// Returns the next doc_type that should be uploaded based on current status AND
-// what has already been uploaded. More precise than getDocTypeForStatus alone.
-function getNextDocType(project, docs) {
-  const status   = project?.status || "";
-  const uploaded = (docs || []).map(d => d.doc_type);
-  const has      = t => uploaded.includes(t);
-  const staff    = isStaffRole(currentUser?.role || "dealer");
-
-  if (status === "present") {
-    if (staff) return has("quotation_support") ? null : "quotation_support";
-    return has("quotation_dealer") ? null : "quotation_dealer";
-  }
-  if (status === "quotation") {
-    if (staff) {
-      if (!has("tor_support")) return "tor_support";
-      if (!has("tor_dealer")) return "tor_dealer";
-      return null;
-    }
-    return has("tor_dealer") ? null : "tor_dealer";
-  }
-  if (status === "tor") return has("contract") ? null : "contract";
-  if (status === "contract" && staff) return has("closing") ? null : "closing";
-  return null;
-}
-
 // Fetches fresh project + docs from API, rebuilds the detail screen in place.
 // Call after any operation that may have changed project status or documents.
 async function refreshDetail(projectId, options = {}) {
@@ -2791,7 +2749,7 @@ async function refreshDetail(projectId, options = {}) {
 
   // Fetch fresh project from API (auto-advance may have changed status)
   try {
-    const res = await fetchWithTimeout(`${API}/api/v1/projects/${projectId}`, {
+    const res = await fetchWithTimeout(`${API_BASE}/projects/${projectId}`, {
       headers: { Authorization: "Bearer " + token },
     });
     if (res.ok) {
@@ -2837,7 +2795,7 @@ async function refreshDetail(projectId, options = {}) {
 async function deleteDocument(docId) {
   if (!confirm("ต้องการลบเอกสารนี้ใช่ไหม?")) return;
   try {
-    const res = await fetchWithTimeout(`${API}/api/v1/documents/${docId}`, {
+    const res = await fetchWithTimeout(`${API_BASE}/documents/${docId}`, {
       method:  "DELETE",
       headers: { Authorization: "Bearer " + token },
     });
@@ -2880,7 +2838,7 @@ async function submitPresent(projectId, btn) {
 async function saveProjectAppointment(projectId, apptType, date, note, presentType, btn) {
   setBtnLoading(btn, true);
   try {
-    const res = await fetchWithTimeout(`${API}/api/v1/projects/${projectId}/appointments/${apptType}`, {
+    const res = await fetchWithTimeout(`${API_BASE}/projects/${projectId}/appointments/${apptType}`, {
       method: "PUT",
       headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -2935,14 +2893,10 @@ function openRejectPanel(projectId) {
   openRejectOverlay();
 }
 
-/* ─── (keep for compatibility – Reject still uses overlay) ─── */
-let _pendingStatus    = "";
-let _pendingProjectID = "";
-
 async function doChangeStatus(projectID, status, statusNote, rejectReason, appointmentDate, appointmentNote, presentType, btn) {
   setBtnLoading(btn, true);
   try {
-    const res = await fetchWithTimeout(`${API}/api/v1/projects/${projectID}/status`, {
+    const res = await fetchWithTimeout(`${API_BASE}/projects/${projectID}/status`, {
       method: "PUT",
       headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -3002,45 +2956,6 @@ async function doChangeStatus(projectID, status, statusNote, rejectReason, appoi
     }
   } catch (e) { toast("เปลี่ยนสถานะไม่สำเร็จ"); }
   finally { setBtnLoading(btn, false); }
-}
-
-/* ─── Overlay: document upload — uses getNextDocType for smart determination ─── */
-function openUploadOverlay(projectID) {
-  const status  = currentProject?.status || "";
-  const docType = getNextDocType(currentProject, currentDocs);
-
-  if (!docType) {
-    toast("แนบเอกสารครบแล้วสำหรับสถานะนี้");
-    return;
-  }
-
-  if (status === "quotation" && isStaffRole(currentUser?.role)) {
-    const iid = esc(projectID);
-    const has = t => (currentDocs || []).some(d => d.doc_type === t);
-    let body = "";
-    if (!has("tor_support")) {
-      body += `<button class="ov-btn ov-btn-primary"
-          onclick="closeOverlay();openDocUpload('${iid}','tor_support')">
-          📎 แนบ TOR จาก Support (หลัก)
-        </button>`;
-    }
-    if (!has("tor_dealer")) {
-      body += `<button class="ov-btn ov-btn-cancel"
-          onclick="closeOverlay();openDocUpload('${iid}','tor_dealer')">
-          📎 แนบ TOR จาก Dealer (ไม่บังคับ)
-        </button>`;
-    }
-    if (!body) { toast("แนบเอกสารครบแล้วสำหรับสถานะนี้"); return; }
-    document.getElementById("ov-title").textContent = "แนบร่าง TOR";
-    document.getElementById("ov-sub").textContent   = "เลือกประเภทไฟล์ TOR";
-    document.getElementById("ov-body").innerHTML    =
-      `<div style="display:flex;flex-direction:column;gap:10px">${body}</div>`;
-    document.getElementById("ov-confirm").style.display = "none";
-    document.getElementById("overlay").classList.add("on");
-  } else {
-    // All other statuses: go directly to upload page
-    openDocUpload(projectID, docType);
-  }
 }
 
 /* ─── Overlay: reject reason ─── */
@@ -3122,13 +3037,6 @@ function fileIcon(filename) {
   if (["doc","docx"].includes(ext)) return "📝";
   if (["xls","xlsx"].includes(ext)) return "📊";
   return "📎";
-}
-
-function fmtSize(bytes) {
-  if (!bytes) return "";
-  if (bytes < 1024)        return bytes + " B";
-  if (bytes < 1048576)     return (bytes / 1024).toFixed(1) + " KB";
-  return (bytes / 1048576).toFixed(1) + " MB";
 }
 
 /* ─── Profile dropdown toggle ─── */
@@ -3367,7 +3275,7 @@ async function saveProfile() {
 /* ─── Members: ข้อมูลพนักงาน ─── */
 async function loadMembers() {
   try {
-    const res = await fetchWithTimeout(API + "/api/v1/company/members", {
+    const res = await fetchWithTimeout(`${API_BASE}/company/members`, {
       headers: { Authorization: "Bearer " + token },
     });
     if (!res.ok) {
@@ -3408,55 +3316,13 @@ function renderMembers(members) {
 async function changeMemberRole(userId, newRole) {
   if (!confirm(`เปลี่ยน role เป็น "${newRole}" ใช่ไหม?`)) { loadMembers(); return; }
   try {
-    await fetchWithTimeout(`${API}/api/v1/company/members/${userId}/role`, {
+    await fetchWithTimeout(`${API_BASE}/company/members/${userId}/role`, {
       method: "PUT",
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
       body: JSON.stringify({ role: newRole }),
     });
     loadMembers();
   } catch (e) { toast("เปลี่ยน role ไม่สำเร็จ"); }
-}
-
-/* ─── Company: ข้อมูลบริษัท ─── */
-async function loadCompany() {
-  try {
-    const res = await fetchWithTimeout(API + "/api/v1/company", {
-      headers: { Authorization: "Bearer " + token },
-    });
-    if (!res.ok) {
-      document.getElementById("screen-company").innerHTML = "<p style='text-align:center;padding:40px;color:#8e8e93'>ไม่มีสิทธิ์เข้าถึง</p>";
-      return;
-    }
-    const c = await res.json();
-    document.getElementById("companyName").value    = c.name    || "";
-    document.getElementById("companyAddress").value = c.address || "";
-    document.getElementById("companyTaxId").value   = c.tax_id  || "";
-    if (c.invite_code) {
-      document.getElementById("inviteCodeDisplay").textContent = c.invite_code;
-    }
-  } catch (e) { toast("โหลดข้อมูลบริษัทไม่สำเร็จ"); }
-}
-
-async function saveCompany() {
-  try {
-    const res = await fetchWithTimeout(API + "/api/v1/company", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
-      body: JSON.stringify({
-        name:    document.getElementById("companyName").value.trim(),
-        address: document.getElementById("companyAddress").value.trim(),
-        tax_id:  document.getElementById("companyTaxId").value.trim(),
-      }),
-    });
-    if (res.ok) toast("บันทึกบริษัทสำเร็จ ✓");
-    else toast("บันทึกไม่สำเร็จ");
-  } catch (e) { toast("ไม่สามารถเชื่อมต่อได้"); }
-}
-
-function copyInviteCode() {
-  const code = document.getElementById("inviteCodeDisplay").textContent.trim();
-  navigator.clipboard?.writeText(code).catch(() => {});
-  toast("คัดลอก Invite Code แล้ว ✓");
 }
 
 // When the user returns from the external upload tab, refresh project + docs.

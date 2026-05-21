@@ -92,10 +92,11 @@
 
 <script>
 const FRONTEND_BASE_URL = "https://vizzelintel.github.io/vizzel-sales-frontend/";
+const API               = "https://vizzel-sales-api.fly.dev";
+const API_BASE          = API + "/api/v1";
 const params            = new URLSearchParams(location.search);
 const PROJECT_ID        = params.get("project_id") || "";
 const TOKEN             = params.get("token")      || "";
-const API_BASE          = "https://vizzel-sales-api.fly.dev/api/v1";
 
 // Maps any Thai label (from old links) to the canonical English doc_type value
 const DOC_TYPE_MAP = {
@@ -181,7 +182,7 @@ async function doUpload() {
   fd.append("file",       selectedFile);
 
   try {
-    const res  = await fetch(API_BASE + "/documents", {
+    const res  = await fetch(`${API_BASE}/documents`, {
       method:  "POST",
       headers: { Authorization: "Bearer " + TOKEN },
       body:    fd,
