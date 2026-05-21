@@ -199,7 +199,7 @@
   <p class="splash-sub">ระบบจัดการลูกค้า<br>หน่วยงานราชการ</p>
   <div class="splash-spinner" id="splashSpinner"></div>
   <p id="splashStatus" style="font-size:13px;color:#8e8e93;margin-top:12px">กำลังโหลด...</p>
-  <p id="splashVersion" style="font-size:11px;color:#c7c7cc;margin-top:6px">v20260521e</p>
+  <p id="splashVersion" style="font-size:11px;color:#c7c7cc;margin-top:6px">v20260521f</p>
   <p id="splashErr" class="splash-err" style="display:none"></p>
   <button id="splashRetry" type="button" style="display:none;margin-top:14px;background:#06C755;color:white;border:none;padding:12px 28px;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit"
     onclick="localStorage.removeItem('vizzel_token');try{liff.logout();}catch(e){}window.location.reload();">ลองใหม่</button>
@@ -336,10 +336,6 @@
       <div style="display:flex;gap:8px;align-items:center;margin:12px 0 8px">
         <input type="text" id="pipeSearchInput" placeholder="ค้นหาหน่วยงาน..."
           style="flex:1;padding:10px 14px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;outline:none;">
-        <button onclick="openCreateModal()"
-          style="background:#06C755;color:white;border:none;padding:10px 16px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit">
-          + สร้าง
-        </button>
       </div>
       <div id="pipeFilterBar" style="display:none;gap:6px;flex-wrap:wrap;margin-bottom:12px">
         <select id="pipeFilterCompany" onchange="applyPipeFilters()"
@@ -375,11 +371,34 @@
     <!-- Projects list (directory — all companies, view-only reference) -->
     <div class="screen" id="screen-projects">
       <div style="font-size:12px;color:#8e8e93;margin-bottom:10px;line-height:1.45">
-        รายการอ้างอิงทั้งระบบ — แสดงชื่อหน่วยงาน · จังหวัด · สถานะ (กดดูรายละเอียดที่แท็บ Pipeline)
+        ค้นหาหน่วยงานทั้งระบบก่อนสร้าง — แสดงชื่อ · จังหวัด · สถานะ · ไม่พบแล้วกดสร้างได้เลย (เปิดรายละเอียดที่แท็บ Pipeline)
       </div>
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
         <input type="text" id="searchInput" placeholder="ค้นหาชื่อหน่วยงาน..."
           style="flex:1;padding:10px 14px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;outline:none;">
+        <button onclick="openCreateModal()"
+          style="background:#06C755;color:white;border:none;padding:10px 16px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit">
+          + สร้าง
+        </button>
+      </div>
+      <div id="dirFilterBar" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+        <select id="dirFilterAgencyType" onchange="applyFilters()"
+          style="padding:8px 10px;border-radius:8px;border:1.5px solid #e5e5ea;font-size:13px;font-family:inherit;outline:none;background:white">
+          <option value="">ทุกประเภท</option>
+          <option>กระทรวง</option><option>กรม</option>
+          <option>องค์การบริหารส่วนจังหวัด</option><option>องค์การบริหารส่วนตำบล</option>
+          <option>เทศบาลนคร</option><option>เทศบาลเมือง</option><option>เทศบาลตำบล</option>
+          <option>รัฐวิสาหกิจ</option><option>โรงเรียน</option><option>วิทยาลัย</option>
+          <option>มหาวิทยาลัย</option><option>โรงพยาบาลศูนย์</option>
+          <option>โรงพยาบาลทั่วไป</option><option>โรงพยาบาลชุมชน</option>
+          <option>โรงพยาบาลเอกชน</option><option>บริษัทเอกชน</option>
+        </select>
+        <div class="province-wrapper">
+          <input type="text" id="dirFilterProvince" class="province-input"
+            placeholder="🔍 ค้นหาจังหวัด..." autocomplete="off"
+            style="padding:8px 12px;border-radius:8px;border:1.5px solid #e5e5ea;font-size:13px;width:160px;">
+          <div id="dirFilterProvinceDropdown" class="province-dropdown"></div>
+        </div>
       </div>
 
       <div class="plist" id="projList"></div>
@@ -1252,9 +1271,13 @@ function upsertLocalProject(p) {
 
 function buildDirectoryQueryParams() {
   const params = new URLSearchParams();
-  const search = document.getElementById("searchInput")?.value.trim() || "";
+  const search     = document.getElementById("searchInput")?.value.trim()           || "";
+  const agencyType = document.getElementById("dirFilterAgencyType")?.value        || "";
+  const province   = document.getElementById("dirFilterProvince")?.value            || "";
   params.set("scope", "directory");
-  if (search) params.set("search", search);
+  if (search)     params.set("search",      search);
+  if (agencyType) params.set("agency_type", agencyType);
+  if (province)   params.set("province",    province);
   params.set("page",  String(directoryPage));
   params.set("limit", String(PROJECTS_PER_PAGE));
   return params;
@@ -1682,10 +1705,16 @@ async function submitCreateCompany() {
 
 /* ─── Create modal ─── */
 function openCreateModal() {
+  const prefillName     = document.getElementById("searchInput")?.value.trim()           || "";
+  const prefillType     = document.getElementById("dirFilterAgencyType")?.value          || "";
+  const prefillProvince = document.getElementById("dirFilterProvince")?.value            || "";
   document.getElementById("createModal").style.display = "flex";
   document.getElementById("createProjectForm").reset();
   document.getElementById("createError").style.display    = "none";
   document.getElementById("agencyNameError").style.display = "none";
+  if (prefillName)     document.getElementById("newAgencyName").value  = prefillName;
+  if (prefillType)     document.getElementById("newAgencyType").value  = prefillType;
+  if (prefillProvince) document.getElementById("newProvince").value    = prefillProvince;
   // Reset any red borders from previous validation attempt
   ["newAgencyName","newAgencyType","newProvince","newContactName","newContactPosition","newPhone"]
     .forEach(id => {
@@ -1705,6 +1734,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Initialize province search components
   createProvinceSearch("pipeFilterProvince", "pipeFilterProvinceDropdown", applyPipeFilters);
+  createProvinceSearch("dirFilterProvince",  "dirFilterProvinceDropdown",  applyFilters);
   createProvinceSearch("newProvince",        "newProvinceDropdown",        null);
 
   // Refresh project + docs after upload tab posts UPLOAD_SUCCESS
