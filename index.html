@@ -520,7 +520,7 @@
         </select>
       </div>
       <div style="margin-bottom:14px">
-        <label style="font-size:13px;color:#636366;font-weight:600">จังหวัด</label>
+        <label style="font-size:13px;color:#636366;font-weight:600">จังหวัด *</label>
         <div class="province-wrapper" style="margin-top:6px">
           <input type="text" id="newProvince" class="province-input"
             placeholder="พิมพ์เพื่อค้นหาจังหวัด..." autocomplete="off"
@@ -529,12 +529,12 @@
         </div>
       </div>
       <div style="margin-bottom:14px">
-        <label style="font-size:13px;color:#636366;font-weight:600">ผู้ติดต่อ</label>
+        <label style="font-size:13px;color:#636366;font-weight:600">ผู้ติดต่อ *</label>
         <input type="text" id="newContactName" placeholder="ชื่อผู้ติดต่อ"
           style="width:100%;padding:10px 12px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;margin-top:6px;outline:none;box-sizing:border-box">
       </div>
       <div style="margin-bottom:14px">
-        <label style="font-size:13px;color:#636366;font-weight:600">ตำแหน่ง</label>
+        <label style="font-size:13px;color:#636366;font-weight:600">ตำแหน่ง *</label>
         <input type="text" id="newContactPosition" placeholder="ตำแหน่ง / แผนก"
           style="width:100%;padding:10px 12px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;margin-top:6px;outline:none;box-sizing:border-box">
       </div>
@@ -1187,8 +1187,14 @@ async function submitCreateCompany() {
 function openCreateModal() {
   document.getElementById("createModal").style.display = "flex";
   document.getElementById("createProjectForm").reset();
-  document.getElementById("createError").style.display   = "none";
+  document.getElementById("createError").style.display    = "none";
   document.getElementById("agencyNameError").style.display = "none";
+  // Reset any red borders from previous validation attempt
+  ["newAgencyName","newAgencyType","newProvince","newContactName","newContactPosition","newPhone"]
+    .forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.border = "1.5px solid #e5e5ea";
+    });
 }
 
 function closeCreateModal() {
@@ -1217,26 +1223,51 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("createProjectForm").addEventListener("submit", async function(e) {
     e.preventDefault();
 
-    const agencyName = document.getElementById("newAgencyName").value;
-    const nameErrEl  = document.getElementById("agencyNameError");
-    const errEl      = document.getElementById("createError");
-    const btn        = document.getElementById("createSubmitBtn");
+    const nameErrEl = document.getElementById("agencyNameError");
+    const errEl     = document.getElementById("createError");
+    const btn       = document.getElementById("createSubmitBtn");
 
-    // Client-side validation (mirrors backend rules)
-    const trimmed = agencyName.trim();
-    const abbrev  = /อบต\.?|อบจ\.?|ทต\.?|ทน\.?|ทม\.?|\.$|^\.|\.{2,}/;
-    if (!trimmed) {
-      nameErrEl.textContent    = "กรุณากรอกชื่อหน่วยงาน";
-      nameErrEl.style.display  = "block";
-      return;
-    }
-    if (abbrev.test(trimmed)) {
-      nameErrEl.textContent    = "กรุณาใส่ชื่อหน่วยงานแบบเต็ม ไม่ใช้ตัวย่อหรือจุด (.)";
-      nameErrEl.style.display  = "block";
-      return;
-    }
     nameErrEl.style.display = "none";
     errEl.style.display     = "none";
+
+    // Required field validation — all fields must be filled
+    const requiredFields = [
+      { id: "newAgencyName",      label: "ชื่อหน่วยงาน" },
+      { id: "newAgencyType",      label: "ประเภทหน่วยงาน" },
+      { id: "newProvince",        label: "จังหวัด" },
+      { id: "newContactName",     label: "ผู้ติดต่อ" },
+      { id: "newContactPosition", label: "ตำแหน่ง" },
+      { id: "newPhone",           label: "โทรศัพท์" },
+    ];
+    for (const field of requiredFields) {
+      const el  = document.getElementById(field.id);
+      const val = el ? el.value.trim() : "";
+      if (!val) {
+        errEl.textContent    = "กรุณากรอก" + field.label;
+        errEl.style.display  = "block";
+        if (el) {
+          el.style.border = "1.5px solid #FF3B30";
+          const resetBorder = () => { el.style.border = "1.5px solid #e5e5ea"; };
+          el.addEventListener("input",  resetBorder, { once: true });
+          el.addEventListener("change", resetBorder, { once: true });
+          el.focus();
+        }
+        return;
+      }
+    }
+
+    // Agency name abbreviation check (mirrors backend rule)
+    const trimmed = document.getElementById("newAgencyName").value.trim();
+    const abbrev  = /อบต\.?|อบจ\.?|ทต\.?|ทน\.?|ทม\.?|\.$|^\.|\.{2,}/;
+    if (abbrev.test(trimmed)) {
+      nameErrEl.textContent   = "กรุณาใส่ชื่อหน่วยงานแบบเต็ม ไม่ใช้ตัวย่อหรือจุด (.)";
+      nameErrEl.style.display = "block";
+      const nameEl = document.getElementById("newAgencyName");
+      nameEl.style.border = "1.5px solid #FF3B30";
+      nameEl.addEventListener("input", () => { nameEl.style.border = "1.5px solid #e5e5ea"; }, { once: true });
+      nameEl.focus();
+      return;
+    }
 
     btn.textContent = "กำลังสร้าง...";
     btn.disabled    = true;
