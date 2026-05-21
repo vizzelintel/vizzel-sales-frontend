@@ -330,11 +330,16 @@
         <div class="spin-wrap" style="grid-column:1/-1"><div class="spinner"></div></div>
       </div>
       <div class="sec">โครงการล่าสุด</div>
+      <div style="font-size:12px;color:#8e8e93;margin:-4px 0 8px">บริษัทของคุณ · เรียงตามกิจกรรมล่าสุด</div>
       <div class="plist" id="pipeRecent"></div>
+      <div id="pipeRecentPagination" class="proj-pagination" style="display:none"></div>
     </div>
 
-    <!-- Projects list -->
+    <!-- Projects list (directory — all companies, view-only reference) -->
     <div class="screen" id="screen-projects">
+      <div style="font-size:12px;color:#8e8e93;margin-bottom:10px;line-height:1.45">
+        รายการโครงการทั้งหมดในระบบ (ดูอย่างเดียว) — ใช้ตรวจสอบว่าหน่วยงานไหนถูกจองแล้วก่อนสร้างโครงการใหม่
+      </div>
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
         <input type="text" id="searchInput" placeholder="ค้นหาหน่วยงาน..."
           style="flex:1;padding:10px 14px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;outline:none;">
@@ -626,13 +631,19 @@ const API               = "https://vizzel-sales-api.fly.dev";
 const API_BASE          = API + "/api/v1";
 
 let token    = "";
-let projects = [];
-let projectsTotal = 0;
-let projectsPage = 1;
-let projectsTotalPages = 1;
-let statusCounts = {};
+let pipelineCounts = {};
+let pipelineRecent = [];
+let pipelineRecentPage = 1;
+let pipelineRecentTotal = 0;
+let pipelineRecentTotalPages = 1;
+
+let directoryProjects = [];
+let directoryTotal = 0;
+let directoryPage = 1;
+let directoryTotalPages = 1;
 let listStatusFilter = "";
 const PROJECTS_PER_PAGE = 10;
+const PIPELINE_RECENT_LIMIT = 10;
 let curTab   = "pipeline";
 let prevTab  = "pipeline";
 let pendingLineId      = "";
@@ -1119,7 +1130,7 @@ function initApp() {
   document.getElementById("register").style.display = "none";
   document.getElementById("emailVerify").style.display = "none";
   document.getElementById("app").style.display    = "flex";
-  loadProjects();
+  reloadProjectViews();
 }
 
 function showEmailVerifyGate() {
@@ -1215,64 +1226,109 @@ async function confirmVerifyOTP() {
 }
 
 /* ─── Data ─── */
-function buildProjectQueryParams() {
+function findLocalProject(id) {
+  return directoryProjects.find(x => x.id === id)
+    || pipelineRecent.find(x => x.id === id);
+}
+
+function upsertLocalProject(p) {
+  if (!p?.id) return;
+  const di = directoryProjects.findIndex(x => x.id === p.id);
+  if (di >= 0) directoryProjects[di] = p;
+  const pi = pipelineRecent.findIndex(x => x.id === p.id);
+  if (pi >= 0) pipelineRecent[pi] = p;
+}
+
+function buildDirectoryQueryParams() {
   const params = new URLSearchParams();
   const search     = document.getElementById("searchInput")?.value.trim()     || "";
   const company    = document.getElementById("filterCompany")?.value          || "";
   const agencyType = document.getElementById("filterAgencyType")?.value       || "";
   const province   = document.getElementById("filterProvince")?.value         || "";
+  params.set("scope", "directory");
   if (search)     params.set("search",      search);
   if (company)    params.set("company",     company);
   if (agencyType) params.set("agency_type", agencyType);
   if (province)   params.set("province",    province);
   if (listStatusFilter) params.set("status", listStatusFilter);
-  params.set("page",  String(projectsPage));
+  params.set("page",  String(directoryPage));
   params.set("limit", String(PROJECTS_PER_PAGE));
   return params;
 }
 
-async function loadProjects() {
+async function loadPipeline(page) {
+  if (page) pipelineRecentPage = page;
   try {
-    const url = `${API_BASE}/projects?` + buildProjectQueryParams().toString();
-    const res = await fetchWithTimeout(url, {
+    const params = new URLSearchParams();
+    params.set("scope", "pipeline");
+    params.set("page", String(pipelineRecentPage));
+    params.set("limit", String(PIPELINE_RECENT_LIMIT));
+    const res = await fetchWithTimeout(`${API_BASE}/projects?` + params.toString(), {
       headers: { Authorization: "Bearer " + token },
     }, 15000);
-    if (!res.ok) throw new Error("projects " + res.status);
+    if (!res.ok) throw new Error("pipeline " + res.status);
     const data = await res.json();
-    if (Array.isArray(data)) {
-      projects = data;
-      projectsTotal = data.length;
-      projectsPage = 1;
-      projectsTotalPages = 1;
-      statusCounts = {};
-    } else {
-      projects = data.items || [];
-      projectsTotal = data.total ?? projects.length;
-      projectsPage = data.page ?? 1;
-      projectsTotalPages = data.total_pages ?? 1;
-      statusCounts = data.status_counts || {};
-    }
-    try { renderPipeline(); } catch (e) { console.error("renderPipeline", e); }
-    try { renderProjList(); } catch (e) { console.error("renderProjList", e); }
+    pipelineRecent = data.items || [];
+    pipelineRecentTotal = data.total ?? pipelineRecent.length;
+    pipelineRecentPage = data.page ?? pipelineRecentPage;
+    pipelineRecentTotalPages = data.total_pages ?? 1;
+    pipelineCounts = data.status_counts || {};
+    renderPipeline();
   } catch (e) {
-    console.error("loadProjects", e);
-    toast("โหลดข้อมูลไม่สำเร็จ");
+    console.error("loadPipeline", e);
     const pg = document.getElementById("pipeGrid");
-    if (pg) pg.innerHTML = emptyH("⚠️","โหลดไม่สำเร็จ","grid-column:1/-1");
+    if (pg) pg.innerHTML = emptyH("⚠️","โหลด Pipeline ไม่สำเร็จ","grid-column:1/-1");
   }
 }
 
+async function loadDirectory() {
+  try {
+    const res = await fetchWithTimeout(`${API_BASE}/projects?` + buildDirectoryQueryParams().toString(), {
+      headers: { Authorization: "Bearer " + token },
+    }, 15000);
+    if (!res.ok) throw new Error("directory " + res.status);
+    const data = await res.json();
+    if (Array.isArray(data)) {
+      directoryProjects = data;
+      directoryTotal = data.length;
+      directoryPage = 1;
+      directoryTotalPages = 1;
+    } else {
+      directoryProjects = data.items || [];
+      directoryTotal = data.total ?? directoryProjects.length;
+      directoryPage = data.page ?? 1;
+      directoryTotalPages = data.total_pages ?? 1;
+    }
+    renderProjList();
+  } catch (e) {
+    console.error("loadDirectory", e);
+    toast("โหลดรายการโครงการไม่สำเร็จ");
+    const el = document.getElementById("projList");
+    if (el) el.innerHTML = emptyH("⚠️","โหลดไม่สำเร็จ");
+  }
+}
+
+async function reloadProjectViews() {
+  await Promise.all([loadPipeline(pipelineRecentPage), loadDirectory()]);
+}
+
 function goProjPage(page) {
-  if (page < 1 || page > projectsTotalPages || page === projectsPage) return;
-  projectsPage = page;
-  loadProjects();
+  if (page < 1 || page > directoryTotalPages || page === directoryPage) return;
+  directoryPage = page;
+  loadDirectory();
   document.getElementById("projList")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function goPipelineRecentPage(page) {
+  if (page < 1 || page > pipelineRecentTotalPages || page === pipelineRecentPage) return;
+  loadPipeline(page);
+  document.getElementById("pipeRecent")?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 /* ─── Pipeline ─── */
 function renderPipeline() {
   const counts = {};
-  STATUS_KEYS.forEach(s => counts[s] = statusCounts[s] || 0);
+  STATUS_KEYS.forEach(s => counts[s] = pipelineCounts[s] || 0);
 
   document.getElementById("pipeGrid").innerHTML = STATUS_KEYS.map(s => {
     const g = STATUS[s].group;
@@ -1282,23 +1338,39 @@ function renderPipeline() {
     </div>`;
   }).join("");
 
-  if (projectsPage === 1 && !listStatusFilter) {
-    const recent = projects.slice(0, 5);
-    document.getElementById("pipeRecent").innerHTML =
-      recent.length ? recent.map(rowH).join("") : emptyH("📂","ยังไม่มีโครงการ");
+  document.getElementById("pipeRecent").innerHTML =
+    pipelineRecent.length
+      ? pipelineRecent.map(rowH).join("")
+      : emptyH("📂","ยังไม่มีโครงการ");
+  renderPipelineRecentPagination();
+}
+
+function renderPipelineRecentPagination() {
+  const el = document.getElementById("pipeRecentPagination");
+  if (!el) return;
+  if (pipelineRecentTotalPages <= 1 && pipelineRecentTotal <= PIPELINE_RECENT_LIMIT) {
+    el.style.display = "none";
+    return;
   }
+  el.style.display = "flex";
+  const from = pipelineRecentTotal ? (pipelineRecentPage - 1) * PIPELINE_RECENT_LIMIT + 1 : 0;
+  const to = Math.min(pipelineRecentPage * PIPELINE_RECENT_LIMIT, pipelineRecentTotal);
+  el.innerHTML = `
+    <button type="button" ${pipelineRecentPage <= 1 ? "disabled" : ""} onclick="goPipelineRecentPage(${pipelineRecentPage - 1})">‹ ก่อนหน้า</button>
+    <span>หน้า ${pipelineRecentPage}/${pipelineRecentTotalPages} · ${from}–${to} จาก ${pipelineRecentTotal}</span>
+    <button type="button" ${pipelineRecentPage >= pipelineRecentTotalPages ? "disabled" : ""} onclick="goPipelineRecentPage(${pipelineRecentPage + 1})">ถัดไป ›</button>`;
 }
 
 function filterGo(status) {
   listStatusFilter = status;
-  projectsPage = 1;
-  loadProjects();
+  directoryPage = 1;
+  loadDirectory();
   showTab("projects", false);
 }
 
 function clearListStatusFilter() {
   listStatusFilter = "";
-  projectsPage = 1;
+  directoryPage = 1;
 }
 
 /* ─── Project list ─── */
@@ -1307,30 +1379,30 @@ function renderProjList() {
   if (listStatusFilter && STATUS[listStatusFilter]) {
     title = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
       <span style="font-size:13px;font-weight:600;color:#636366">สถานะ: ${esc(STATUS[listStatusFilter].label)}</span>
-      <button type="button" onclick="clearListStatusFilter();loadProjects()"
+      <button type="button" onclick="clearListStatusFilter();loadDirectory()"
         style="background:none;border:none;color:#007AFF;font-size:13px;cursor:pointer;font-family:inherit">ล้างตัวกรอง</button>
     </div>`;
   }
 
   document.getElementById("projList").innerHTML = title +
-    (projects.length ? projects.map(rowH).join("") : emptyH("📂","ยังไม่มีโครงการ"));
+    (directoryProjects.length ? directoryProjects.map(rowH).join("") : emptyH("📂","ยังไม่มีโครงการ"));
   renderProjPagination();
 }
 
 function renderProjPagination() {
   const el = document.getElementById("projPagination");
   if (!el) return;
-  if (projectsTotalPages <= 1 && projectsTotal <= PROJECTS_PER_PAGE) {
+  if (directoryTotalPages <= 1 && directoryTotal <= PROJECTS_PER_PAGE) {
     el.style.display = "none";
     return;
   }
   el.style.display = "flex";
-  const from = projectsTotal ? (projectsPage - 1) * PROJECTS_PER_PAGE + 1 : 0;
-  const to = Math.min(projectsPage * PROJECTS_PER_PAGE, projectsTotal);
+  const from = directoryTotal ? (directoryPage - 1) * PROJECTS_PER_PAGE + 1 : 0;
+  const to = Math.min(directoryPage * PROJECTS_PER_PAGE, directoryTotal);
   el.innerHTML = `
-    <button type="button" ${projectsPage <= 1 ? "disabled" : ""} onclick="goProjPage(${projectsPage - 1})">‹ ก่อนหน้า</button>
-    <span>หน้า ${projectsPage}/${projectsTotalPages} · ${from}–${to} จาก ${projectsTotal}</span>
-    <button type="button" ${projectsPage >= projectsTotalPages ? "disabled" : ""} onclick="goProjPage(${projectsPage + 1})">ถัดไป ›</button>`;
+    <button type="button" ${directoryPage <= 1 ? "disabled" : ""} onclick="goProjPage(${directoryPage - 1})">‹ ก่อนหน้า</button>
+    <span>หน้า ${directoryPage}/${directoryTotalPages} · ${from}–${to} จาก ${directoryTotal}</span>
+    <button type="button" ${directoryPage >= directoryTotalPages ? "disabled" : ""} onclick="goProjPage(${directoryPage + 1})">ถัดไป ›</button>`;
 }
 
 /* ─── Search + Filters ─── */
@@ -1341,8 +1413,8 @@ function onSearchInput() {
 }
 
 function applyFilters() {
-  projectsPage = 1;
-  loadProjects();
+  directoryPage = 1;
+  loadDirectory();
 }
 
 async function loadCompanyFilterOptions() {
@@ -1592,6 +1664,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const projectId = event.data.projectId || detailProjectID;
     if (!projectId) return;
     await refreshDetail(projectId);
+    await reloadProjectViews();
     const isAttachment = event.data.docType === ATTACHMENT_DOC_TYPE;
     const statusLabel = STATUS[currentProject?.status]?.label || "";
     toast("แนบเอกสารสำเร็จ ✓" + (!isAttachment && statusLabel ? ` • สถานะ: ${statusLabel}` : ""));
@@ -1679,9 +1752,9 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       closeCreateModal();
-      projectsPage = 1;
+      directoryPage = 1;
       listStatusFilter = "";
-      await loadProjects();
+      await reloadProjectViews();
       showDetail(data.id);
 
     } catch (e) {
@@ -1719,7 +1792,7 @@ function rowH(p) {
 async function showDetail(id) {
   prevTab = curTab;
   detailProjectID = id;
-  const p = projects.find(x => x.id === id);
+  const p = findLocalProject(id);
   if (!p) return;
 
   currentProject = p;
@@ -1993,8 +2066,7 @@ async function saveProjectInfo() {
       return;
     }
     currentProject = data;
-    const idx = projects.findIndex(x => x.id === p.id);
-    if (idx >= 0) projects[idx] = data;
+    upsertLocalProject(data);
     detailInfoEditing = false;
     toast("บันทึกข้อมูลโครงการแล้ว ✓");
     await refreshDetail(p.id);
@@ -2163,11 +2235,10 @@ async function saveNote() {
     }
     if (data.id) {
       currentProject = data;
-      const pi = projects.findIndex(x => x.id === projectId);
-      if (pi >= 0) projects[pi] = data;
+      upsertLocalProject(data);
     } else if (currentProject) {
       currentProject.detail_note = note;
-      const p = projects.find(x => x.id === projectId);
+      const p = findLocalProject(projectId);
       if (p) p.detail_note = note;
     }
     const noteVal = (currentProject?.detail_note ?? note);
@@ -2625,12 +2696,11 @@ async function refreshDetail(projectId, options = {}) {
     if (res.ok) {
       const fresh = await res.json();
       currentProject = fresh;
-      const idx = projects.findIndex(x => x.id === projectId);
-      if (idx >= 0) projects[idx] = fresh;
+      upsertLocalProject(fresh);
     }
   } catch (e) { /* keep existing currentProject */ }
 
-  const p = currentProject || projects.find(x => x.id === projectId);
+  const p = currentProject || findLocalProject(projectId);
   if (!p) return;
 
   // Do not rebuild DOM while user is editing or entering data.
@@ -2659,8 +2729,7 @@ async function refreshDetail(projectId, options = {}) {
   }
 
   if (!light) {
-    renderPipeline();
-    renderProjList();
+    await reloadProjectViews();
   }
 }
 
@@ -2787,7 +2856,7 @@ async function doChangeStatus(projectID, status, statusNote, rejectReason, appoi
     const data = await res.json();
     if (!res.ok) { toast(data.error || "เปลี่ยนสถานะไม่สำเร็จ"); return; }
 
-    const p = projects.find(x => x.id === projectID);
+    const p = findLocalProject(projectID);
     if (p) {
       p.status            = status;
       p.status_note       = statusNote      || "";
@@ -2808,7 +2877,7 @@ async function doChangeStatus(projectID, status, statusNote, rejectReason, appoi
       await fetchProjectAppointments(projectID);
     }
 
-    await loadProjects();
+    await reloadProjectViews();
     if (p) {
       currentProject = p;
       // Re-render detail: refresh docs so status buttons reflect updated requirements
