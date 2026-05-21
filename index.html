@@ -1573,6 +1573,16 @@ function stopDetailRefresh() {
   }
 }
 
+const AGENCY_TYPE_OPTIONS = [
+  "กระทรวง","กรม","องค์การบริหารส่วนจังหวัด","องค์การบริหารส่วนตำบล",
+  "เทศบาลนคร","เทศบาลเมือง","เทศบาลตำบล","รัฐวิสาหกิจ","โรงเรียน","วิทยาลัย",
+  "มหาวิทยาลัย","โรงพยาบาลศูนย์","โรงพยาบาลทั่วไป","โรงพยาบาลชุมชน","โรงพยาบาลเอกชน","บริษัทเอกชน",
+];
+
+function canEditProjectInfo(p) {
+  return p && p.status !== "closed";
+}
+
 function buildDetailInfo(p) {
   const rows = [
     ["หน่วยงาน",   p.agency_name || "-"],
@@ -1588,9 +1598,156 @@ function buildDetailInfo(p) {
     ...(p.status_note   ? [["หมายเหตุ",       esc(p.status_note)]]   : []),
     ["สร้างเมื่อ", fmtDate(p.created_at)],
   ];
-  return `<div class="dcard" style="margin-bottom:12px">${
-    rows.map(([k,v]) => `<div class="drow"><div class="dkey">${k}</div><div class="dval">${v}</div></div>`).join("")
-  }</div>` + buildAppointmentsSection(p);
+  const typeOpts = AGENCY_TYPE_OPTIONS.map(t =>
+    `<option value="${esc(t)}"${p.agency_type === t ? " selected" : ""}>${esc(t)}</option>`
+  ).join("");
+  const editBtn = canEditProjectInfo(p)
+    ? `<button id="infoEditBtn" type="button" onclick="enableInfoEdit()"
+        style="background:none;border:1px solid #c7c7cc;border-radius:6px;padding:4px 12px;font-size:13px;cursor:pointer;color:#636366;font-family:inherit">
+        ✏️ แก้ไขข้อมูล
+      </button>` : "";
+  return `<div id="infoSection" class="dcard" style="margin-bottom:12px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #f2f2f7">
+      <span style="font-weight:700;font-size:14px;color:#1c1c1e">ข้อมูลโครงการ</span>
+      ${editBtn}
+    </div>
+    <div id="infoViewMode">${
+      rows.map(([k,v]) => `<div class="drow"><div class="dkey">${k}</div><div class="dval">${v}</div></div>`).join("")
+    }</div>
+    <div id="infoEditMode" style="display:none">
+      <div style="margin-bottom:12px">
+        <label style="font-size:12px;color:#636366;font-weight:600">ชื่อหน่วยงาน *</label>
+        <input type="text" id="editAgencyName" style="width:100%;padding:10px;border-radius:8px;border:1px solid #e5e5ea;font-size:14px;margin-top:4px;box-sizing:border-box;font-family:inherit">
+        <small id="editAgencyNameError" style="color:#FF3B30;display:none;font-size:12px"></small>
+      </div>
+      <div style="margin-bottom:12px">
+        <label style="font-size:12px;color:#636366;font-weight:600">ประเภทหน่วยงาน *</label>
+        <select id="editAgencyType" style="width:100%;padding:10px;border-radius:8px;border:1px solid #e5e5ea;font-size:14px;margin-top:4px;box-sizing:border-box;font-family:inherit">
+          <option value="">-- เลือกประเภท --</option>${typeOpts}
+        </select>
+      </div>
+      <div style="margin-bottom:12px">
+        <label style="font-size:12px;color:#636366;font-weight:600">จังหวัด *</label>
+        <div class="province-wrapper" style="margin-top:4px">
+          <input type="text" id="editProvince" class="province-input" autocomplete="off"
+            style="border-radius:8px;border:1px solid #e5e5ea;font-size:14px;padding:10px;">
+          <div id="editProvinceDropdown" class="province-dropdown"></div>
+        </div>
+      </div>
+      <div style="margin-bottom:12px">
+        <label style="font-size:12px;color:#636366;font-weight:600">ผู้ติดต่อ *</label>
+        <input type="text" id="editContactName" style="width:100%;padding:10px;border-radius:8px;border:1px solid #e5e5ea;font-size:14px;margin-top:4px;box-sizing:border-box;font-family:inherit">
+      </div>
+      <div style="margin-bottom:12px">
+        <label style="font-size:12px;color:#636366;font-weight:600">ตำแหน่ง *</label>
+        <input type="text" id="editContactPosition" style="width:100%;padding:10px;border-radius:8px;border:1px solid #e5e5ea;font-size:14px;margin-top:4px;box-sizing:border-box;font-family:inherit">
+      </div>
+      <div style="margin-bottom:12px">
+        <label style="font-size:12px;color:#636366;font-weight:600">โทรศัพท์</label>
+        <input type="tel" id="editPhone" placeholder="0812345678" style="width:100%;padding:10px;border-radius:8px;border:1px solid #e5e5ea;font-size:14px;margin-top:4px;box-sizing:border-box;font-family:inherit">
+      </div>
+      <div id="editInfoError" style="color:#FF3B30;font-size:13px;display:none;margin-bottom:8px"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button type="button" onclick="cancelInfoEdit()"
+          style="border:1px solid #c7c7cc;background:white;border-radius:6px;padding:8px 16px;cursor:pointer;color:#636366;font-family:inherit;font-size:14px">ยกเลิก</button>
+        <button type="button" onclick="saveProjectInfo()"
+          style="background:#06C755;border:none;border-radius:6px;padding:8px 16px;color:white;font-weight:700;cursor:pointer;font-family:inherit;font-size:14px">บันทึก</button>
+      </div>
+    </div>
+  </div>` + buildAppointmentsSection(p);
+}
+
+function enableInfoEdit() {
+  const p = currentProject;
+  if (!canEditProjectInfo(p)) {
+    toast("ไม่สามารถแก้ไขได้ เนื่องจากงานปิดแล้ว");
+    return;
+  }
+  document.getElementById("infoViewMode").style.display = "none";
+  document.getElementById("infoEditMode").style.display = "block";
+  const btn = document.getElementById("infoEditBtn");
+  if (btn) btn.style.display = "none";
+  document.getElementById("editAgencyName").value = p.agency_name || "";
+  document.getElementById("editAgencyType").value = p.agency_type || "";
+  document.getElementById("editProvince").value = p.region || "";
+  document.getElementById("editContactName").value = p.contact_person || "";
+  document.getElementById("editContactPosition").value = p.contact_position || "";
+  document.getElementById("editPhone").value = p.contact_phone || "";
+  document.getElementById("editAgencyNameError").style.display = "none";
+  document.getElementById("editInfoError").style.display = "none";
+  createProvinceSearch("editProvince", "editProvinceDropdown", null);
+}
+
+function cancelInfoEdit() {
+  document.getElementById("infoViewMode").style.display = "block";
+  document.getElementById("infoEditMode").style.display = "none";
+  const btn = document.getElementById("infoEditBtn");
+  if (btn) btn.style.display = "block";
+}
+
+async function saveProjectInfo() {
+  const p = currentProject;
+  if (!p?.id) return;
+  const errEl = document.getElementById("editInfoError");
+  const nameErr = document.getElementById("editAgencyNameError");
+  errEl.style.display = "none";
+  nameErr.style.display = "none";
+
+  const trimmed = document.getElementById("editAgencyName").value.trim();
+  const abbrev = /อบต\.?|อบจ\.?|ทต\.?|ทน\.?|ทม\.?|\.$|^\.|\.{2,}/;
+  if (!trimmed) {
+    errEl.textContent = "กรุณากรอกชื่อหน่วยงาน";
+    errEl.style.display = "block";
+    return;
+  }
+  if (abbrev.test(trimmed)) {
+    nameErr.textContent = "กรุณาใส่ชื่อหน่วยงานแบบเต็ม ไม่ใช้ตัวย่อหรือจุด (.)";
+    nameErr.style.display = "block";
+    return;
+  }
+  const required = [
+    ["editAgencyType", "ประเภทหน่วยงาน"],
+    ["editProvince", "จังหวัด"],
+    ["editContactName", "ผู้ติดต่อ"],
+    ["editContactPosition", "ตำแหน่ง"],
+  ];
+  for (const [id, label] of required) {
+    if (!document.getElementById(id).value.trim()) {
+      errEl.textContent = "กรุณากรอก" + label;
+      errEl.style.display = "block";
+      return;
+    }
+  }
+
+  const body = {
+    agency_name: trimmed,
+    agency_type: document.getElementById("editAgencyType").value,
+    region: document.getElementById("editProvince").value.trim(),
+    contact_person: document.getElementById("editContactName").value.trim(),
+    contact_position: document.getElementById("editContactPosition").value.trim(),
+    contact_phone: document.getElementById("editPhone").value.trim(),
+  };
+
+  try {
+    const res = await fetchWithTimeout(`${API}/api/v1/projects/${p.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      errEl.textContent = data.error || "บันทึกไม่สำเร็จ";
+      errEl.style.display = "block";
+      return;
+    }
+    currentProject = data;
+    const idx = projects.findIndex(x => x.id === p.id);
+    if (idx >= 0) projects[idx] = data;
+    toast("บันทึกข้อมูลโครงการแล้ว ✓");
+    await refreshDetail(p.id);
+  } catch {
+    toast("ไม่สามารถเชื่อมต่อได้ กรุณาลองใหม่");
+  }
 }
 
 const APPT_DISPLAY_ORDER = [
@@ -1744,17 +1901,24 @@ async function saveNote() {
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
       body:    JSON.stringify({ detail_note: note }),
     });
+    const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      toast(err.error || `บันทึกไม่สำเร็จ (${res.status})`);
+      toast(data.error || `บันทึกไม่สำเร็จ (${res.status})`);
       return;
     }
-    if (currentProject) currentProject.detail_note = note;
-    const p = projects.find(x => x.id === projectId);
-    if (p) p.detail_note = note;
+    if (data.id) {
+      currentProject = data;
+      const pi = projects.findIndex(x => x.id === projectId);
+      if (pi >= 0) projects[pi] = data;
+    } else if (currentProject) {
+      currentProject.detail_note = note;
+      const p = projects.find(x => x.id === projectId);
+      if (p) p.detail_note = note;
+    }
+    const noteVal = (currentProject?.detail_note ?? note);
     const viewText = document.getElementById("noteViewText");
-    if (viewText) viewText.innerHTML = note
-      ? `<span style="white-space:pre-wrap">${esc(note)}</span>`
+    if (viewText) viewText.innerHTML = noteVal
+      ? `<span style="white-space:pre-wrap">${esc(noteVal)}</span>`
       : `<span style="color:#c7c7cc">-</span>`;
     cancelNoteEdit();
     toast("บันทึกรายละเอียดแล้ว ✓");
