@@ -1554,30 +1554,41 @@ function buildDetailInfo(p) {
   }</div>` + buildAppointmentsSection(p);
 }
 
-const APPT_TYPE_LABELS = {
-  present: "นัดหมาย Present",
-  demo: "นัดหมาย Demo",
-  site_survey: "นัดหมาย Site Survey",
-};
+const APPT_DISPLAY_ORDER = [
+  { type: "present", label: "วันพรีเซ็น" },
+  { type: "demo", label: "วัน Demo" },
+  { type: "site_survey", label: "วัน Site Survey" },
+];
+
+function appointmentByType(projectID, type) {
+  return (projectAppointments[projectID] || []).find(a => a.type === type);
+}
 
 function buildAppointmentsSection(p) {
-  const list = projectAppointments[p.id] || [];
-  if (!list.length) return "";
-  const rows = list.map(a => {
-    const label = APPT_TYPE_LABELS[a.type] || a.type;
-    const when = a.scheduled_at ? fmtDateTimeLocal(a.scheduled_at) : "-";
-    const extra = a.present_type
-      ? ` · ${a.present_type === "online" ? "Online" : "Onsite"}`
-      : "";
-    const note = a.note ? `<div style="font-size:12px;color:#8e8e93;margin-top:4px">${esc(a.note)}</div>` : "";
+  const rows = APPT_DISPLAY_ORDER.map(({ type, label }) => {
+    const a = appointmentByType(p.id, type);
+    let when = "ยังไม่นัด";
+    let extra = "";
+    let note = "";
+    if (a?.scheduled_at) {
+      when = fmtDateTimeLocal(a.scheduled_at);
+      if (type === "present" && a.present_type) {
+        extra = ` · ${a.present_type === "online" ? "Online" : "Onsite"}`;
+      }
+      if (a.note) note = `<div style="font-size:12px;color:#8e8e93;margin-top:4px">${esc(a.note)}</div>`;
+    }
+    const whenColor = a?.scheduled_at ? "#1c1c1e" : "#8e8e93";
     return `<div style="padding:10px 0;border-bottom:1px solid #f2f2f7">
-      <div style="font-weight:600;font-size:14px;color:#007AFF">${esc(label)}</div>
-      <div style="font-size:13px;color:#1c1c1e;margin-top:4px">📅 ${esc(when)}${extra}</div>
+      <div style="font-size:13px;color:#636366;font-weight:600">${esc(label)}</div>
+      <div style="font-size:14px;color:${whenColor};margin-top:4px">${a?.scheduled_at ? "📅 " : ""}${esc(when)}${extra}</div>
       ${note}
     </div>`;
   }).join("");
   return `<div class="dcard" style="margin-bottom:12px;padding:16px">
-    <div style="font-weight:700;font-size:14px;margin-bottom:8px">📅 นัดหมายที่บันทึกแล้ว</div>
+    <div style="font-weight:700;font-size:14px;margin-bottom:4px">📅 กำหนดการนัดหมาย</div>
+    <div style="font-size:12px;color:#8e8e93;margin-bottom:10px;line-height:1.4">
+      พรีเซ็นครั้งแรกเมื่อลงทะเบียน · Demo/Site Survey นัดเพิ่มได้ภายหลัง (ไม่เปลี่ยนสถานะงาน)
+    </div>
     ${rows}
   </div>`;
 }
@@ -1876,8 +1887,9 @@ function renderStatusSection(p, docs) {
       html += `<div class="dcard" style="margin-bottom:12px;overflow:hidden">
         <button onclick="toggleActionPanel('demo-panel','demo-arrow')"
           style="width:100%;padding:14px 16px;background:none;border:none;text-align:left;font-size:14px;font-weight:600;cursor:pointer;color:#007AFF;font-family:inherit;display:flex;align-items:center;gap:8px">
-          <span id="demo-arrow">›</span> + นัดหมาย Demo (ไม่บังคับ)
+          <span id="demo-arrow">›</span> + นัดวัน Demo (ไม่บังคับ)
         </button>
+        <div style="padding:0 16px 8px;font-size:12px;color:#8e8e93">นัดได้หลังพรีเซ็นแล้ว ไม่เปลี่ยนสถานะงาน (เช่นหลังเสนอราคา/TOR/สัญญา)</div>
         <div id="demo-panel" style="display:none;padding:0 16px 16px">
           <div style="margin-bottom:10px">
             <div class="ap-lbl">วันและเวลา *</div>
@@ -1898,8 +1910,9 @@ function renderStatusSection(p, docs) {
       html += `<div class="dcard" style="margin-bottom:12px;overflow:hidden">
         <button onclick="toggleActionPanel('survey-panel','survey-arrow')"
           style="width:100%;padding:14px 16px;background:none;border:none;text-align:left;font-size:14px;font-weight:600;cursor:pointer;color:#007AFF;font-family:inherit;display:flex;align-items:center;gap:8px">
-          <span id="survey-arrow">›</span> + นัดหมาย Site Survey (ไม่บังคับ)
+          <span id="survey-arrow">›</span> + นัดวัน Site Survey (ไม่บังคับ)
         </button>
+        <div style="padding:0 16px 8px;font-size:12px;color:#8e8e93">นัดได้หลังพรีเซ็นแล้ว ไม่เปลี่ยนสถานะงาน</div>
         <div id="survey-panel" style="display:none;padding:0 16px 16px">
           <div style="margin-bottom:10px">
             <div class="ap-lbl">วันและเวลา *</div>
