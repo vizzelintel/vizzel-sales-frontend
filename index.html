@@ -196,7 +196,7 @@
   <p class="splash-sub">ระบบจัดการลูกค้า<br>หน่วยงานราชการ</p>
   <div class="splash-spinner" id="splashSpinner"></div>
   <p id="splashStatus" style="font-size:13px;color:#8e8e93;margin-top:12px">กำลังโหลด...</p>
-  <p id="splashVersion" style="font-size:11px;color:#c7c7cc;margin-top:6px">v20260521d</p>
+  <p id="splashVersion" style="font-size:11px;color:#c7c7cc;margin-top:6px">v20260521e</p>
   <p id="splashErr" class="splash-err" style="display:none"></p>
   <button id="splashRetry" type="button" style="display:none;margin-top:14px;background:#06C755;color:white;border:none;padding:12px 28px;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit"
     onclick="localStorage.removeItem('vizzel_token');try{liff.logout();}catch(e){}window.location.reload();">ลองใหม่</button>
@@ -617,11 +617,11 @@
   </div>
 </div>
 
-<script>
+<script>/* build 20260521e */
 const FRONTEND_BASE_URL = "https://vizzelintel.github.io/vizzel-sales-frontend/";
 const LIFF_ID           = "2010133685-tke1EWht";
 const LIFF_OPEN_URL     = "https://liff.line.me/" + LIFF_ID;
-const APP_BOOT_VERSION  = "20260521d";
+const APP_BOOT_VERSION  = "20260521e";
 const API               = "https://vizzel-sales-api.fly.dev";
 const API_BASE          = API + "/api/v1";
 
@@ -1163,7 +1163,7 @@ async function sendVerifyOTP() {
       if (data.debug_otp) hintEl.textContent += ` (DEV OTP: ${data.debug_otp})`;
       toast("ส่ง OTP สำเร็จ ✓");
     }
-  } catch {
+  } catch (e) {
     errEl.textContent = "ไม่สามารถเชื่อมต่อได้";
     errEl.style.display = "block";
   } finally {
@@ -1372,7 +1372,7 @@ async function loadCompanies() {
       return;
     }
     renderCompaniesList(await res.json());
-  } catch {
+  } catch (e) {
     document.getElementById("companiesList").innerHTML = emptyH("⚠️","โหลดไม่สำเร็จ");
   }
 }
@@ -1549,7 +1549,7 @@ async function submitCreateCompany() {
     toast(`สร้างบริษัทสำเร็จ! Invite Code: ${data.invite_code}`);
     loadCompanies();
     loadCompanyFilterOptions();
-  } catch {
+  } catch (e) {
     errEl.textContent   = "ไม่สามารถเชื่อมต่อได้";
     errEl.style.display = "block";
   }
@@ -1679,7 +1679,7 @@ document.addEventListener("DOMContentLoaded", () => {
       await loadProjects();
       showDetail(data.id);
 
-    } catch {
+    } catch (e) {
       errEl.textContent    = "ไม่สามารถเชื่อมต่อได้ กรุณาลองใหม่";
       errEl.style.display  = "block";
     } finally {
@@ -1728,7 +1728,7 @@ async function showDetail(id) {
       fetchProjectDocs(id),
     ]);
     docs = fetchedDocs;
-  } catch { /* fetchProjectDocs returns [] on error; this is a safety net */ }
+  } catch (e) { /* fetchProjectDocs returns [] on error; this is a safety net */ }
 
   document.getElementById("detailContent").innerHTML =
     buildDetailHeader(p) +
@@ -1739,13 +1739,13 @@ async function showDetail(id) {
 
   try {
     renderDocsSection(docs, id);
-  } catch {
+  } catch (e) {
     const el = document.getElementById("docsSection");
     if (el) el.innerHTML = `<div class="dcard" style="padding:14px">${emptyH("⚠️","ไม่สามารถโหลดเอกสารได้")}</div>`;
   }
   try {
     renderStatusSection(p, docs);
-  } catch {
+  } catch (e) {
     const el = document.getElementById("statusSection");
     if (el) el.innerHTML = `<p style="color:#8e8e93;font-size:13px;text-align:center;padding:16px">ไม่สามารถโหลดสถานะได้ กรุณารีเฟรช</p>`;
   }
@@ -1996,7 +1996,7 @@ async function saveProjectInfo() {
     detailInfoEditing = false;
     toast("บันทึกข้อมูลโครงการแล้ว ✓");
     await refreshDetail(p.id);
-  } catch {
+  } catch (e) {
     toast("ไม่สามารถเชื่อมต่อได้ กรุณาลองใหม่");
   }
 }
@@ -2045,7 +2045,7 @@ function fmtDateTimeLocal(iso) {
   try {
     const d = new Date(iso);
     return d.toLocaleString("th-TH", { dateStyle: "medium", timeStyle: "short", hour12: false });
-  } catch { return iso; }
+  } catch (e) { return iso; }
 }
 
 let projectAppointments = {};
@@ -2175,7 +2175,7 @@ async function saveNote() {
       : `<span style="color:#c7c7cc">-</span>`;
     cancelNoteEdit();
     toast("บันทึกรายละเอียดแล้ว ✓");
-  } catch {
+  } catch (e) {
     toast("ไม่สามารถเชื่อมต่อได้ กรุณาลองใหม่");
   }
 }
@@ -2186,7 +2186,7 @@ async function fetchProjectDocs(projectID) {
       headers: { Authorization: "Bearer " + token },
     });
     return res.ok ? await res.json() : [];
-  } catch { return []; }
+  } catch (e) { return []; }
 }
 
 async function fetchProjectAppointments(projectID) {
@@ -2197,7 +2197,7 @@ async function fetchProjectAppointments(projectID) {
     const list = res.ok ? await res.json() : [];
     projectAppointments[projectID] = Array.isArray(list) ? list : [];
     return projectAppointments[projectID];
-  } catch {
+  } catch (e) {
     projectAppointments[projectID] = [];
     return [];
   }
@@ -2585,7 +2585,7 @@ async function refreshDetail(projectId, options = {}) {
       const idx = projects.findIndex(x => x.id === projectId);
       if (idx >= 0) projects[idx] = fresh;
     }
-  } catch { /* keep existing currentProject */ }
+  } catch (e) { /* keep existing currentProject */ }
 
   const p = currentProject || projects.find(x => x.id === projectId);
   if (!p) return;
@@ -2600,7 +2600,7 @@ async function refreshDetail(projectId, options = {}) {
       fetchProjectDocs(projectId),
     ]);
     docs = fetchedDocs;
-  } catch {}
+  } catch (e) {}
 
   document.getElementById("detailContent").innerHTML =
     buildDetailHeader(p) +
@@ -2609,11 +2609,11 @@ async function refreshDetail(projectId, options = {}) {
      <div class="sec" style="margin-bottom:7px">เปลี่ยนสถานะ</div>
      <div id="statusSection"><div class="spin-wrap"><div class="spinner"></div></div></div>`;
 
-  try { renderDocsSection(docs, projectId); } catch {
+  try { renderDocsSection(docs, projectId); } catch (e) {
     const el = document.getElementById("docsSection");
     if (el) el.innerHTML = `<div class="dcard" style="padding:14px">${emptyH("⚠️","ไม่สามารถโหลดเอกสารได้")}</div>`;
   }
-  try { renderStatusSection(p, docs); } catch {
+  try { renderStatusSection(p, docs); } catch (e) {
     const el = document.getElementById("statusSection");
     if (el) el.innerHTML = `<p style="color:#8e8e93;font-size:13px;text-align:center;padding:16px">ไม่สามารถโหลดสถานะได้ กรุณารีเฟรช</p>`;
   }
@@ -2638,7 +2638,7 @@ async function deleteDocument(docId) {
     }
     toast("ลบเอกสารสำเร็จ ✓");
     if (detailProjectID) await refreshDetail(detailProjectID);
-  } catch {
+  } catch (e) {
     toast("ไม่สามารถเชื่อมต่อได้");
   }
 }
@@ -2688,7 +2688,7 @@ async function saveProjectAppointment(projectId, apptType, date, note, presentTy
     await fetchProjectAppointments(projectId);
     if (detailProjectID === projectId) await refreshDetail(projectId);
     return true;
-  } catch {
+  } catch (e) {
     toast("ไม่สามารถเชื่อมต่อได้");
     return false;
   } finally {
@@ -2779,21 +2779,21 @@ async function doChangeStatus(projectID, status, statusNote, rejectReason, appoi
          <div class="sec" style="margin-bottom:7px">เปลี่ยนสถานะ</div>
          <div id="statusSection"><div class="spin-wrap"><div class="spinner"></div></div></div>`;
       let docs = [];
-      try { docs = await fetchProjectDocs(projectID); } catch {}
+      try { docs = await fetchProjectDocs(projectID); } catch (e) {}
       try {
         renderDocsSection(docs, projectID);
-      } catch {
+      } catch (e) {
         const el = document.getElementById("docsSection");
         if (el) el.innerHTML = `<div class="dcard" style="padding:14px">${emptyH("⚠️","ไม่สามารถโหลดเอกสารได้")}</div>`;
       }
       try {
         renderStatusSection(p, docs);
-      } catch {
+      } catch (e) {
         const el = document.getElementById("statusSection");
         if (el) el.innerHTML = `<p style="color:#8e8e93;font-size:13px;text-align:center;padding:16px">ไม่สามารถโหลดสถานะได้ กรุณารีเฟรช</p>`;
       }
     }
-  } catch { toast("เปลี่ยนสถานะไม่สำเร็จ"); }
+  } catch (e) { toast("เปลี่ยนสถานะไม่สำเร็จ"); }
   finally { setBtnLoading(btn, false); }
 }
 
@@ -3056,7 +3056,7 @@ async function profileSendOTP() {
       if (data.debug_otp) hintEl.textContent += ` (DEV: ${data.debug_otp})`;
       toast("ส่ง OTP สำเร็จ ✓");
     }
-  } catch {
+  } catch (e) {
     errEl.textContent = "ไม่สามารถเชื่อมต่อได้";
     errEl.style.display = "block";
   } finally {
@@ -3154,7 +3154,7 @@ async function saveProfile() {
     });
     if (res.ok) { toast("บันทึกสำเร็จ ✓"); loadMe(); }
     else { const e = await res.json().catch(() => ({})); toast(e.error || "บันทึกไม่สำเร็จ"); }
-  } catch { toast("ไม่สามารถเชื่อมต่อได้"); }
+  } catch (e) { toast("ไม่สามารถเชื่อมต่อได้"); }
 }
 
 /* ─── Members: ข้อมูลพนักงาน ─── */
@@ -3168,7 +3168,7 @@ async function loadMembers() {
       return;
     }
     renderMembers(await res.json());
-  } catch { document.getElementById("membersList").innerHTML = emptyH("⚠️","โหลดไม่สำเร็จ"); }
+  } catch (e) { document.getElementById("membersList").innerHTML = emptyH("⚠️","โหลดไม่สำเร็จ"); }
 }
 
 function renderMembers(members) {
@@ -3207,7 +3207,7 @@ async function changeMemberRole(userId, newRole) {
       body: JSON.stringify({ role: newRole }),
     });
     loadMembers();
-  } catch { toast("เปลี่ยน role ไม่สำเร็จ"); }
+  } catch (e) { toast("เปลี่ยน role ไม่สำเร็จ"); }
 }
 
 /* ─── Company: ข้อมูลบริษัท ─── */
@@ -3227,7 +3227,7 @@ async function loadCompany() {
     if (c.invite_code) {
       document.getElementById("inviteCodeDisplay").textContent = c.invite_code;
     }
-  } catch { toast("โหลดข้อมูลบริษัทไม่สำเร็จ"); }
+  } catch (e) { toast("โหลดข้อมูลบริษัทไม่สำเร็จ"); }
 }
 
 async function saveCompany() {
@@ -3243,7 +3243,7 @@ async function saveCompany() {
     });
     if (res.ok) toast("บันทึกบริษัทสำเร็จ ✓");
     else toast("บันทึกไม่สำเร็จ");
-  } catch { toast("ไม่สามารถเชื่อมต่อได้"); }
+  } catch (e) { toast("ไม่สามารถเชื่อมต่อได้"); }
 }
 
 function copyInviteCode() {
