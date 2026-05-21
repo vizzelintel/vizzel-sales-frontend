@@ -40,6 +40,7 @@
     .pipe-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 18px; }
     .pipe-card { background: white; border-radius: 10px; padding: 10px 6px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,.07); border-top: 3px solid; cursor: pointer; transition: transform .12s; }
     .pipe-card:active { transform: scale(.96); }
+    .pipe-card.ring-active { box-shadow: 0 0 0 2px #06C755; }
     .pipe-card .cnt  { font-size: 26px; font-weight: 700; line-height: 1; }
     .pipe-card .lbl  { font-size: 10px; color: #8e8e93; margin-top: 4px; line-height: 1.2; }
     /* color groups */
@@ -57,6 +58,8 @@
     .prow  { padding: 12px 14px; border-bottom: 1px solid #f2f2f7; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: background .1s; }
     .prow:last-child { border-bottom: none; }
     .prow:active { background: #f5f5f5; }
+    .prow-static { cursor: default; }
+    .prow-static:active { background: transparent; }
     .prow-info { flex: 1; min-width: 0; }
     .prow-name { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .prow-sub  { font-size: 12px; color: #8e8e93; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -329,33 +332,21 @@
       <div class="pipe-grid" id="pipeGrid">
         <div class="spin-wrap" style="grid-column:1/-1"><div class="spinner"></div></div>
       </div>
-      <div class="sec">โครงการล่าสุด</div>
-      <div style="font-size:12px;color:#8e8e93;margin:-4px 0 8px">บริษัทของคุณ · เรียงตามกิจกรรมล่าสุด</div>
-      <div class="plist" id="pipeRecent"></div>
-      <div id="pipeRecentPagination" class="proj-pagination" style="display:none"></div>
-    </div>
 
-    <!-- Projects list (directory — all companies, view-only reference) -->
-    <div class="screen" id="screen-projects">
-      <div style="font-size:12px;color:#8e8e93;margin-bottom:10px;line-height:1.45">
-        รายการโครงการทั้งหมดในระบบ (ดูอย่างเดียว) — ใช้ตรวจสอบว่าหน่วยงานไหนถูกจองแล้วก่อนสร้างโครงการใหม่
-      </div>
-      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
-        <input type="text" id="searchInput" placeholder="ค้นหาหน่วยงาน..."
+      <div style="display:flex;gap:8px;align-items:center;margin:12px 0 8px">
+        <input type="text" id="pipeSearchInput" placeholder="ค้นหาหน่วยงาน..."
           style="flex:1;padding:10px 14px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;outline:none;">
         <button onclick="openCreateModal()"
           style="background:#06C755;color:white;border:none;padding:10px 16px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit">
           + สร้าง
         </button>
       </div>
-
-      <!-- Filter bar: shown only for admin + support -->
-      <div id="filterBar" style="display:none;gap:6px;flex-wrap:wrap;margin-bottom:12px">
-        <select id="filterCompany" onchange="applyFilters()"
+      <div id="pipeFilterBar" style="display:none;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+        <select id="pipeFilterCompany" onchange="applyPipeFilters()"
           style="padding:8px 10px;border-radius:8px;border:1.5px solid #e5e5ea;font-size:13px;font-family:inherit;outline:none;background:white">
           <option value="">ทุกบริษัท</option>
         </select>
-        <select id="filterAgencyType" onchange="applyFilters()"
+        <select id="pipeFilterAgencyType" onchange="applyPipeFilters()"
           style="padding:8px 10px;border-radius:8px;border:1.5px solid #e5e5ea;font-size:13px;font-family:inherit;outline:none;background:white">
           <option value="">ทุกประเภท</option>
           <option>กระทรวง</option><option>กรม</option>
@@ -367,11 +358,28 @@
           <option>โรงพยาบาลเอกชน</option><option>บริษัทเอกชน</option>
         </select>
         <div class="province-wrapper">
-          <input type="text" id="filterProvince" class="province-input"
+          <input type="text" id="pipeFilterProvince" class="province-input"
             placeholder="🔍 ค้นหาจังหวัด..." autocomplete="off"
             style="padding:8px 12px;border-radius:8px;border:1.5px solid #e5e5ea;font-size:13px;width:160px;">
-          <div id="filterProvinceDropdown" class="province-dropdown"></div>
+          <div id="pipeFilterProvinceDropdown" class="province-dropdown"></div>
         </div>
+      </div>
+
+      <div class="sec">โครงการล่าสุด</div>
+      <div style="font-size:12px;color:#8e8e93;margin:-4px 0 8px">บริษัทของคุณ · เรียงตามกิจกรรมล่าสุด · กดรายการเพื่อเปิดรายละเอียด</div>
+      <div id="pipeRecentFilterHint"></div>
+      <div class="plist" id="pipeRecent"></div>
+      <div id="pipeRecentPagination" class="proj-pagination" style="display:none"></div>
+    </div>
+
+    <!-- Projects list (directory — all companies, view-only reference) -->
+    <div class="screen" id="screen-projects">
+      <div style="font-size:12px;color:#8e8e93;margin-bottom:10px;line-height:1.45">
+        รายการอ้างอิงทั้งระบบ — แสดงชื่อหน่วยงาน · จังหวัด · สถานะ (กดดูรายละเอียดที่แท็บ Pipeline)
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+        <input type="text" id="searchInput" placeholder="ค้นหาชื่อหน่วยงาน..."
+          style="flex:1;padding:10px 14px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;outline:none;">
       </div>
 
       <div class="plist" id="projList"></div>
@@ -642,6 +650,7 @@ let directoryTotal = 0;
 let directoryPage = 1;
 let directoryTotalPages = 1;
 let listStatusFilter = "";
+let pipelineListStatusFilter = "";
 const PROJECTS_PER_PAGE = 10;
 const PIPELINE_RECENT_LIMIT = 10;
 let curTab   = "pipeline";
@@ -1109,21 +1118,23 @@ function initApp() {
     liff.getProfile().then(p => { document.getElementById("uPic").src = p.pictureUrl || ""; }).catch(() => {});
   } catch(e) {}
 
-  // Show filter bar and populate company dropdown for admin/support
   const role = currentUser?.role || "";
   if (role === "admin" || role === "support") {
-    const fb = document.getElementById("filterBar");
-    if (fb) fb.style.display = "flex";
+    const pfb = document.getElementById("pipeFilterBar");
+    if (pfb) pfb.style.display = "flex";
     loadCompanyFilterOptions();
   }
 
-  // Wire search input to applyFilters
   const searchEl = document.getElementById("searchInput");
   if (searchEl) {
     searchEl.addEventListener("input", function() {
       clearTimeout(_searchTimer);
       _searchTimer = setTimeout(applyFilters, 400);
     });
+  }
+  const pipeSearchEl = document.getElementById("pipeSearchInput");
+  if (pipeSearchEl) {
+    pipeSearchEl.addEventListener("input", onPipeSearchInput);
   }
 
   document.getElementById("splash").style.display = "none";
@@ -1241,29 +1252,35 @@ function upsertLocalProject(p) {
 
 function buildDirectoryQueryParams() {
   const params = new URLSearchParams();
-  const search     = document.getElementById("searchInput")?.value.trim()     || "";
-  const company    = document.getElementById("filterCompany")?.value          || "";
-  const agencyType = document.getElementById("filterAgencyType")?.value       || "";
-  const province   = document.getElementById("filterProvince")?.value         || "";
+  const search = document.getElementById("searchInput")?.value.trim() || "";
   params.set("scope", "directory");
+  if (search) params.set("search", search);
+  params.set("page",  String(directoryPage));
+  params.set("limit", String(PROJECTS_PER_PAGE));
+  return params;
+}
+
+function buildPipelineQueryParams() {
+  const params = new URLSearchParams();
+  params.set("scope", "pipeline");
+  const search     = document.getElementById("pipeSearchInput")?.value.trim()     || "";
+  const company    = document.getElementById("pipeFilterCompany")?.value          || "";
+  const agencyType = document.getElementById("pipeFilterAgencyType")?.value       || "";
+  const province   = document.getElementById("pipeFilterProvince")?.value         || "";
   if (search)     params.set("search",      search);
   if (company)    params.set("company",     company);
   if (agencyType) params.set("agency_type", agencyType);
   if (province)   params.set("province",    province);
-  if (listStatusFilter) params.set("status", listStatusFilter);
-  params.set("page",  String(directoryPage));
-  params.set("limit", String(PROJECTS_PER_PAGE));
+  if (pipelineListStatusFilter) params.set("status", pipelineListStatusFilter);
+  params.set("page",  String(pipelineRecentPage));
+  params.set("limit", String(PIPELINE_RECENT_LIMIT));
   return params;
 }
 
 async function loadPipeline(page) {
   if (page) pipelineRecentPage = page;
   try {
-    const params = new URLSearchParams();
-    params.set("scope", "pipeline");
-    params.set("page", String(pipelineRecentPage));
-    params.set("limit", String(PIPELINE_RECENT_LIMIT));
-    const res = await fetchWithTimeout(`${API_BASE}/projects?` + params.toString(), {
+    const res = await fetchWithTimeout(`${API_BASE}/projects?` + buildPipelineQueryParams().toString(), {
       headers: { Authorization: "Bearer " + token },
     }, 15000);
     if (!res.ok) throw new Error("pipeline " + res.status);
@@ -1332,12 +1349,14 @@ function renderPipeline() {
 
   document.getElementById("pipeGrid").innerHTML = STATUS_KEYS.map(s => {
     const g = STATUS[s].group;
-    return `<div class="pipe-card cg-${g}" onclick="filterGo('${s}')">
+    const active = pipelineListStatusFilter === s ? " ring-active" : "";
+    return `<div class="pipe-card cg-${g}${active}" onclick="filterPipelineGo('${s}')">
       <div class="cnt">${counts[s]}</div>
       <div class="lbl">${STATUS[s].short}</div>
     </div>`;
   }).join("");
 
+  renderPipelineRecentHeader();
   document.getElementById("pipeRecent").innerHTML =
     pipelineRecent.length
       ? pipelineRecent.map(rowH).join("")
@@ -1361,11 +1380,16 @@ function renderPipelineRecentPagination() {
     <button type="button" ${pipelineRecentPage >= pipelineRecentTotalPages ? "disabled" : ""} onclick="goPipelineRecentPage(${pipelineRecentPage + 1})">ถัดไป ›</button>`;
 }
 
-function filterGo(status) {
-  listStatusFilter = status;
-  directoryPage = 1;
-  loadDirectory();
-  showTab("projects", false);
+function filterPipelineGo(status) {
+  pipelineListStatusFilter = pipelineListStatusFilter === status ? "" : status;
+  pipelineRecentPage = 1;
+  loadPipeline();
+}
+
+function clearPipelineStatusFilter() {
+  pipelineListStatusFilter = "";
+  pipelineRecentPage = 1;
+  loadPipeline();
 }
 
 function clearListStatusFilter() {
@@ -1375,18 +1399,30 @@ function clearListStatusFilter() {
 
 /* ─── Project list ─── */
 function renderProjList() {
-  let title = "";
-  if (listStatusFilter && STATUS[listStatusFilter]) {
-    title = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-      <span style="font-size:13px;font-weight:600;color:#636366">สถานะ: ${esc(STATUS[listStatusFilter].label)}</span>
-      <button type="button" onclick="clearListStatusFilter();loadDirectory()"
+  const header = `<div class="prow prow-static" style="background:#f9f9fb;font-size:11px;font-weight:600;color:#8e8e93">
+    <div class="prow-info"><div>หน่วยงาน</div></div>
+    <span style="min-width:72px;text-align:center">จังหวัด</span>
+    <span class="bdg" style="opacity:0;background:transparent;color:#8e8e93;min-width:64px">สถานะ</span>
+  </div>`;
+  document.getElementById("projList").innerHTML = header +
+    (directoryProjects.length ? directoryProjects.map(directoryRowH).join("") : emptyH("📂","ยังไม่มีโครงการ"));
+  renderProjPagination();
+}
+
+function renderPipelineRecentHeader() {
+  const el = document.getElementById("pipeRecentFilterHint");
+  if (!el) return;
+  if (pipelineListStatusFilter && STATUS[pipelineListStatusFilter]) {
+    el.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <span style="font-size:13px;font-weight:600;color:#636366">กรอง: ${esc(STATUS[pipelineListStatusFilter].label)}</span>
+      <button type="button" onclick="clearPipelineStatusFilter()"
         style="background:none;border:none;color:#007AFF;font-size:13px;cursor:pointer;font-family:inherit">ล้างตัวกรอง</button>
     </div>`;
+    el.style.display = "block";
+  } else {
+    el.innerHTML = "";
+    el.style.display = "none";
   }
-
-  document.getElementById("projList").innerHTML = title +
-    (directoryProjects.length ? directoryProjects.map(rowH).join("") : emptyH("📂","ยังไม่มีโครงการ"));
-  renderProjPagination();
 }
 
 function renderProjPagination() {
@@ -1417,6 +1453,28 @@ function applyFilters() {
   loadDirectory();
 }
 
+function applyPipeFilters() {
+  pipelineRecentPage = 1;
+  loadPipeline();
+}
+
+let _pipeSearchTimer = null;
+function onPipeSearchInput() {
+  clearTimeout(_pipeSearchTimer);
+  _pipeSearchTimer = setTimeout(applyPipeFilters, 400);
+}
+
+function fillCompanySelect(sel, companies) {
+  if (!sel) return;
+  while (sel.options.length > 1) sel.remove(1);
+  companies.forEach(c => {
+    const opt = document.createElement("option");
+    opt.value       = c.name;
+    opt.textContent = c.name;
+    sel.appendChild(opt);
+  });
+}
+
 async function loadCompanyFilterOptions() {
   try {
     const res = await fetchWithTimeout(`${API_BASE}/admin/companies`, {
@@ -1424,16 +1482,7 @@ async function loadCompanyFilterOptions() {
     });
     if (!res.ok) return;
     const companies = await res.json();
-    const sel = document.getElementById("filterCompany");
-    if (!sel) return;
-    // Remove all except the first "ทุกบริษัท" option
-    while (sel.options.length > 1) sel.remove(1);
-    companies.forEach(c => {
-      const opt = document.createElement("option");
-      opt.value       = c.name;
-      opt.textContent = c.name;
-      sel.appendChild(opt);
-    });
+    fillCompanySelect(document.getElementById("pipeFilterCompany"), companies);
   } catch(e) {}
 }
 
@@ -1655,8 +1704,8 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // Initialize province search components
-  createProvinceSearch("filterProvince",  "filterProvinceDropdown",  applyFilters);
-  createProvinceSearch("newProvince",     "newProvinceDropdown",     null);
+  createProvinceSearch("pipeFilterProvince", "pipeFilterProvinceDropdown", applyPipeFilters);
+  createProvinceSearch("newProvince",        "newProvinceDropdown",        null);
 
   // Refresh project + docs after upload tab posts UPLOAD_SUCCESS
   window.addEventListener("message", async function(event) {
@@ -1753,7 +1802,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       closeCreateModal();
       directoryPage = 1;
-      listStatusFilter = "";
+      pipelineListStatusFilter = "";
       await reloadProjectViews();
       showDetail(data.id);
 
@@ -1766,6 +1815,17 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 });
+
+function directoryRowH(p) {
+  const g = STATUS[p.status]?.group || "gray";
+  return `<div class="prow prow-static">
+    <div class="prow-info">
+      <div class="prow-name">${esc(p.agency_name || "-")}</div>
+    </div>
+    <span style="font-size:12px;color:#636366;min-width:72px;text-align:center;white-space:nowrap">${esc(p.region || "-")}</span>
+    <span class="bdg bg-${g}">${STATUS[p.status]?.short || p.status}</span>
+  </div>`;
+}
 
 function rowH(p) {
   const sub = [p.agency_type, p.region].filter(Boolean).join(" · ");
@@ -1792,8 +1852,19 @@ function rowH(p) {
 async function showDetail(id) {
   prevTab = curTab;
   detailProjectID = id;
-  const p = findLocalProject(id);
-  if (!p) return;
+  let p = findLocalProject(id);
+  if (!p) {
+    try {
+      const res = await fetchWithTimeout(`${API}/api/v1/projects/${id}`, {
+        headers: { Authorization: "Bearer " + token },
+      });
+      if (res.ok) {
+        p = await res.json();
+        upsertLocalProject(p);
+      }
+    } catch (e) {}
+  }
+  if (!p) { toast("ไม่พบโครงการ"); return; }
 
   currentProject = p;
   activateScreen("detail");
