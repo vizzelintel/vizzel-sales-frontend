@@ -268,8 +268,7 @@
       </div>
       <div onclick="showProfileScreen('profile')" style="padding:13px 16px;cursor:pointer;font-size:14px;border-bottom:1px solid #f5f5f5">👤 ข้อมูลส่วนตัว</div>
       <div id="menuMembers" onclick="showProfileScreen('members')" style="padding:13px 16px;cursor:pointer;font-size:14px;border-bottom:1px solid #f5f5f5;display:none">👥 ข้อมูลพนักงาน</div>
-      <div id="menuCompanies" onclick="showProfileScreen('companies')" style="padding:13px 16px;cursor:pointer;font-size:14px;border-bottom:1px solid #f5f5f5;display:none">🏢 บริษัท Dealer</div>
-      <div id="menuCompany" onclick="showProfileScreen('company')" style="padding:13px 16px;cursor:pointer;font-size:14px;border-bottom:1px solid #f5f5f5;display:none">⚙️ ข้อมูลบริษัทเรา</div>
+      <div id="menuCompany" onclick="showProfileScreen('companies')" style="padding:13px 16px;cursor:pointer;font-size:14px;border-bottom:1px solid #f5f5f5;display:none">🏢 ข้อมูลบริษัท</div>
       <div onclick="logout()" style="padding:13px 16px;cursor:pointer;font-size:14px;color:#FF3B30">🚪 ออกจากระบบ</div>
     </div>
   </div>
@@ -358,7 +357,7 @@
 <div id="profileOverlay" style="display:none;position:fixed;inset:0;z-index:500;background:#f2f2f7;overflow-y:auto">
   <!-- Sticky header with back button -->
   <div style="background:#06C755;color:white;padding:11px 16px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:1">
-    <button onclick="hideProfileOverlay()" style="background:none;border:none;color:white;font-size:22px;cursor:pointer;padding:0;line-height:1">‹</button>
+    <button onclick="profileBack()" style="background:none;border:none;color:white;font-size:22px;cursor:pointer;padding:0;line-height:1">‹</button>
     <h2 id="profileOverlayTitle" style="font-size:16px;font-weight:600;margin:0">ข้อมูลส่วนตัว</h2>
   </div>
 
@@ -429,29 +428,34 @@
     <div id="companiesList"></div>
   </div>
 
-  <!-- ── Screen: ข้อมูลบริษัท ── -->
-  <div id="screen-company" style="display:none;padding:16px">
+  <!-- ── Screen: Company detail ── -->
+  <div id="screen-company-detail" style="display:none;padding:16px">
     <div style="background:white;border-radius:12px;padding:20px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.07)">
       <div style="font-weight:700;font-size:14px;margin-bottom:16px">ข้อมูลบริษัท</div>
       <div style="margin-bottom:12px">
         <label style="font-size:13px;color:#636366;font-weight:600">ชื่อบริษัท *</label>
-        <input id="companyName" type="text" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;margin-top:6px;outline:none;box-sizing:border-box">
+        <input id="detailCompanyName" type="text" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;margin-top:6px;outline:none;box-sizing:border-box">
       </div>
       <div style="margin-bottom:12px">
         <label style="font-size:13px;color:#636366;font-weight:600">ที่อยู่</label>
-        <textarea id="companyAddress" rows="3" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;margin-top:6px;outline:none;resize:none;box-sizing:border-box"></textarea>
+        <textarea id="detailCompanyAddress" rows="3" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;margin-top:6px;outline:none;resize:none;box-sizing:border-box"></textarea>
       </div>
-      <div style="margin-bottom:20px">
+      <div style="margin-bottom:16px">
         <label style="font-size:13px;color:#636366;font-weight:600">เลขนิติบุคคล</label>
-        <input id="companyTaxId" type="text" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;margin-top:6px;outline:none;box-sizing:border-box">
+        <input id="detailCompanyTaxId" type="text" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;margin-top:6px;outline:none;box-sizing:border-box">
       </div>
-      <button onclick="saveCompany()" class="btn btn-green">บันทึกข้อมูลบริษัท</button>
+      <div id="detailSaveError" style="color:#FF3B30;font-size:13px;margin-bottom:10px;display:none"></div>
+      <button onclick="saveCompanyDetail()" class="btn btn-green">บันทึก</button>
+    </div>
+    <div id="detailInviteSection" style="display:none;background:white;border-radius:12px;padding:20px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.07)">
+      <div style="font-weight:700;margin-bottom:8px">🔑 Invite Code</div>
+      <div style="font-size:13px;color:#8e8e93;margin-bottom:12px">ส่ง code นี้ให้พนักงานใหม่เพื่อเข้าใช้งานระบบ</div>
+      <div id="detailInviteCode" style="background:#f5f5f5;border-radius:10px;padding:14px;font-size:22px;font-weight:700;letter-spacing:4px;text-align:center;color:#1c1c1e;margin-bottom:12px">--------</div>
+      <button onclick="copyDetailInviteCode()" style="width:100%;background:#007AFF;color:white;border:none;padding:13px;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit">📋 คัดลอก Invite Code</button>
     </div>
     <div style="background:white;border-radius:12px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.07)">
-      <div style="font-weight:700;margin-bottom:8px">🔑 Invite Code</div>
-      <div style="font-size:13px;color:#8e8e93;margin-bottom:12px">ใช้ code นี้สำหรับเชิญพนักงานใหม่</div>
-      <div id="inviteCodeDisplay" style="background:#f5f5f5;border-radius:10px;padding:14px;font-size:22px;font-weight:700;letter-spacing:4px;text-align:center;color:#1c1c1e;margin-bottom:12px">--------</div>
-      <button onclick="copyInviteCode()" style="width:100%;background:#007AFF;color:white;border:none;padding:13px;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit">📋 คัดลอก Invite Code</button>
+      <div style="font-weight:700;font-size:14px;margin-bottom:16px">พนักงานในบริษัท</div>
+      <div id="detailMembersList"></div>
     </div>
   </div>
 </div>
@@ -1002,31 +1006,34 @@ async function loadCompanies() {
 }
 
 function renderCompaniesList(companies) {
-  const isAdmin = currentUser?.role === "admin";
   if (!companies.length) {
-    document.getElementById("companiesList").innerHTML = emptyH("🏢","ยังไม่มีบริษัท Dealer");
+    document.getElementById("companiesList").innerHTML = emptyH("🏢","ยังไม่มีบริษัท");
     return;
   }
-  document.getElementById("companiesList").innerHTML = companies.map(co => {
-    const typeColor = co.type === "vizzel"
-      ? { bg: "#dff0ff", color: "#007AFF" } : { bg: "#f3e5f5", color: "#6A1B9A" };
-    const typeLabel = co.type === "vizzel" ? "Vizzel" : "Dealer";
-    return `<div style="background:white;border-radius:12px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.07)">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
-        <div style="flex:1;min-width:0">
-          <div style="font-weight:700;font-size:15px">${esc(co.name)}</div>
-          <div style="font-size:12px;color:#8e8e93;margin-top:4px">พนักงาน ${co.member_count || 0} คน</div>
-        </div>
-        <span style="background:${typeColor.bg};color:${typeColor.color};padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600;flex-shrink:0">${typeLabel}</span>
+  // Sort: Vizzel type first, then dealers alphabetically
+  const sorted = [...companies].sort((a, b) => {
+    if (a.type === "vizzel" && b.type !== "vizzel") return -1;
+    if (a.type !== "vizzel" && b.type === "vizzel") return 1;
+    return (a.name || "").localeCompare(b.name || "", "th");
+  });
+  document.getElementById("companiesList").innerHTML = sorted.map(co => {
+    const isVizzel = co.type === "vizzel";
+    return `<div onclick="openCompanyDetail('${esc(co.id)}')"
+      style="background:white;border-radius:12px;padding:16px;margin-bottom:12px;
+             cursor:pointer;display:flex;justify-content:space-between;align-items:center;
+             box-shadow:0 1px 3px rgba(0,0,0,.07)">
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;font-size:15px">${esc(co.name)}</div>
+        <div style="font-size:12px;color:#8e8e93;margin-top:4px">พนักงาน ${co.member_count || 0} คน</div>
       </div>
-      ${isAdmin && co.invite_code ? `
-        <div style="margin-top:10px;background:#f5f5f5;border-radius:8px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center">
-          <span style="font-weight:700;letter-spacing:2px;font-size:14px">${esc(co.invite_code)}</span>
-          <button onclick="copyCode('${esc(co.invite_code)}')"
-            style="background:none;border:1.5px solid #c7c7cc;border-radius:6px;padding:4px 12px;font-size:12px;cursor:pointer;font-family:inherit">
-            📋 คัดลอก
-          </button>
-        </div>` : ""}
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+        <span style="background:${isVizzel ? "#dff0ff" : "#f3e5f5"};
+               color:${isVizzel ? "#007AFF" : "#6A1B9A"};
+               padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600">
+          ${isVizzel ? "🏠 Vizzel" : "🤝 Dealer"}
+        </span>
+        <span style="color:#c7c7cc;font-size:16px">›</span>
+      </div>
     </div>`;
   }).join("");
 }
@@ -1034,6 +1041,99 @@ function renderCompaniesList(companies) {
 function copyCode(code) {
   navigator.clipboard?.writeText(code).catch(() => {});
   toast("คัดลอก Invite Code: " + code + " ✓");
+}
+
+/* ─── Company detail screen ─── */
+let currentCompanyDetail = null;
+
+async function openCompanyDetail(companyId) {
+  try {
+    const res = await fetchWithTimeout(`${API_BASE}/admin/companies/${companyId}`, {
+      headers: { Authorization: "Bearer " + token },
+    });
+    if (!res.ok) { toast("ไม่สามารถโหลดข้อมูลได้"); return; }
+    currentCompanyDetail = await res.json();
+
+    document.getElementById("detailCompanyName").value    = currentCompanyDetail.name    || "";
+    document.getElementById("detailCompanyAddress").value = currentCompanyDetail.address || "";
+    document.getElementById("detailCompanyTaxId").value   = currentCompanyDetail.tax_id  || "";
+    document.getElementById("detailSaveError").style.display = "none";
+
+    const inviteSection = document.getElementById("detailInviteSection");
+    if (currentUser?.role === "admin" && currentCompanyDetail.invite_code) {
+      inviteSection.style.display = "block";
+      document.getElementById("detailInviteCode").textContent = currentCompanyDetail.invite_code;
+    } else {
+      inviteSection.style.display = "none";
+    }
+
+    renderDetailMembers(currentCompanyDetail.members || []);
+    showProfileScreen("company-detail");
+  } catch(e) {
+    toast("ไม่สามารถโหลดข้อมูลได้");
+  }
+}
+
+async function saveCompanyDetail() {
+  if (!currentCompanyDetail) return;
+  const errEl = document.getElementById("detailSaveError");
+  errEl.style.display = "none";
+  try {
+    const res = await fetchWithTimeout(`${API_BASE}/admin/companies/${currentCompanyDetail.id}`, {
+      method:  "PUT",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+      body: JSON.stringify({
+        name:    document.getElementById("detailCompanyName").value.trim(),
+        address: document.getElementById("detailCompanyAddress").value.trim(),
+        tax_id:  document.getElementById("detailCompanyTaxId").value.trim(),
+      }),
+    });
+    if (res.ok) {
+      toast("บันทึกสำเร็จ ✓");
+      // Update title in overlay header
+      currentCompanyDetail.name = document.getElementById("detailCompanyName").value.trim();
+      document.getElementById("profileOverlayTitle").textContent = currentCompanyDetail.name;
+    } else {
+      const err = await res.json().catch(() => ({}));
+      errEl.textContent = err.error || "บันทึกไม่สำเร็จ";
+      errEl.style.display = "block";
+    }
+  } catch(e) {
+    errEl.textContent = "ไม่สามารถเชื่อมต่อได้";
+    errEl.style.display = "block";
+  }
+}
+
+function copyDetailInviteCode() {
+  const code = document.getElementById("detailInviteCode").textContent.trim();
+  navigator.clipboard?.writeText(code).catch(() => {});
+  toast("คัดลอก Invite Code: " + code + " ✓");
+}
+
+function renderDetailMembers(members) {
+  const isAdmin = currentUser?.role === "admin";
+  const el = document.getElementById("detailMembersList");
+  if (!members.length) {
+    el.innerHTML = emptyH("👥","ยังไม่มีพนักงาน");
+    return;
+  }
+  el.innerHTML = members.map(m => `
+    <div style="display:flex;justify-content:space-between;align-items:center;
+                padding:12px 0;border-bottom:1px solid #f2f2f7">
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:600;font-size:14px">${esc((m.first_name + " " + m.last_name).trim() || m.full_name || "-")}</div>
+        <div style="font-size:12px;color:#8e8e93;margin-top:2px">${esc(m.email || "-")}${m.phone ? " · " + esc(m.phone) : ""}</div>
+      </div>
+      ${isAdmin
+        ? `<select onchange="changeMemberRole('${esc(m.id)}', this.value)"
+             style="padding:6px 10px;border-radius:8px;border:1.5px solid #e5e5ea;font-size:13px;font-family:inherit;outline:none;flex-shrink:0"
+             ${m.id === currentUser?.id ? "disabled" : ""}>
+             <option value="dealer"  ${m.role==="dealer" ?"selected":""}>Dealer</option>
+             <option value="support" ${m.role==="support"?"selected":""}>Support</option>
+             <option value="admin"   ${m.role==="admin"  ?"selected":""}>Admin</option>
+           </select>`
+        : `<span style="background:#e4f9ec;color:#34C759;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600;flex-shrink:0">${esc(m.role||"")}</span>`}
+    </div>`).join("");
 }
 
 function openCreateCompanyModal() {
@@ -2003,29 +2103,39 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function applyRoleMenuVisibility(role) {
   const isSupportOrAdmin = role === "support" || role === "admin";
-  document.getElementById("menuMembers").style.display   = isSupportOrAdmin ? "block" : "none";
-  document.getElementById("menuCompanies").style.display = isSupportOrAdmin ? "block" : "none";
-  document.getElementById("menuCompany").style.display   = role === "admin"  ? "block" : "none";
+  document.getElementById("menuMembers").style.display = isSupportOrAdmin ? "block" : "none";
+  document.getElementById("menuCompany").style.display = isSupportOrAdmin ? "block" : "none";
+}
+
+let _profileBackTarget = null;
+
+function profileBack() {
+  if (_profileBackTarget) showProfileScreen(_profileBackTarget);
+  else hideProfileOverlay();
 }
 
 function showProfileScreen(name) {
   document.getElementById("profileDropdown").style.display = "none";
-  ["profile","members","companies","company"].forEach(s => {
-    document.getElementById("screen-" + s).style.display = "none";
+  ["profile","members","companies","company-detail"].forEach(s => {
+    const el = document.getElementById("screen-" + s);
+    if (el) el.style.display = "none";
   });
   const titles = {
-    profile:   "ข้อมูลส่วนตัว",
-    members:   "ข้อมูลพนักงาน",
-    companies: "บริษัท Dealer",
-    company:   "ข้อมูลบริษัทเรา",
+    profile:          "ข้อมูลส่วนตัว",
+    members:          "ข้อมูลพนักงาน",
+    companies:        "ข้อมูลบริษัท",
+    "company-detail": currentCompanyDetail?.name || "ข้อมูลบริษัท",
   };
   document.getElementById("profileOverlayTitle").textContent = titles[name] || "";
-  document.getElementById("screen-" + name).style.display = "block";
-  document.getElementById("profileOverlay").style.display  = "block";
+  const el = document.getElementById("screen-" + name);
+  if (el) el.style.display = "block";
+  document.getElementById("profileOverlay").style.display = "block";
+  // Company-detail → back goes to companies list; all others → back closes overlay
+  _profileBackTarget = name === "company-detail" ? "companies" : null;
+
   if      (name === "profile")   loadMe();
   else if (name === "members")   loadMembers();
   else if (name === "companies") loadCompanies();
-  else if (name === "company")   loadCompany();
 }
 
 function hideProfileOverlay() {
