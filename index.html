@@ -193,7 +193,11 @@
   <div class="splash-icon">📊</div>
   <h2 class="splash-title">Vizzel Sales</h2>
   <p class="splash-sub">ระบบจัดการลูกค้า<br>หน่วยงานราชการ</p>
-  <div class="splash-spinner"></div>
+  <div class="splash-spinner" id="splashSpinner"></div>
+  <p id="splashStatus" style="font-size:13px;color:#8e8e93;margin-top:12px;display:none"></p>
+  <p id="splashErr" class="splash-err" style="display:none"></p>
+  <button id="splashRetry" type="button" style="display:none;margin-top:14px;background:#06C755;color:white;border:none;padding:12px 28px;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit"
+    onclick="localStorage.removeItem('vizzel_token');try{liff.logout();}catch(e){}window.location.reload();">ลองใหม่</button>
 </div>
 
 <!-- ── Register ── -->
@@ -650,6 +654,37 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 8000) {
   }
 }
 
+function promiseTimeout(promise, timeoutMs, label) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error(label || "timeout")), timeoutMs)),
+  ]);
+}
+
+function setSplashStatus(msg) {
+  const el = document.getElementById("splashStatus");
+  if (!el) return;
+  if (msg) { el.textContent = msg; el.style.display = "block"; }
+  else { el.textContent = ""; el.style.display = "none"; }
+}
+
+function showSplashError(msg) {
+  const spin = document.getElementById("splashSpinner");
+  const err  = document.getElementById("splashErr");
+  const retry = document.getElementById("splashRetry");
+  if (spin) spin.style.display = "none";
+  setSplashStatus("");
+  if (err) { err.textContent = msg; err.style.display = "block"; }
+  if (retry) retry.style.display = "inline-block";
+}
+
+function clearOAuthParamsFromUrl() {
+  if (window.location.search) {
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+}
+
 /* ─── Status metadata ─── */
 const STATUS = {
   register:    { label: "Register",        short: "Register",   group: "gray"   },
@@ -754,38 +789,45 @@ function selectProvince(inputId, dropdownId, province) {
 
 /* ─── Init ─── */
 async function initLiff() {
-  // 1. Init LIFF SDK
   try {
-    await liff.init({ liffId: LIFF_ID, withLoginOnExternalBrowser: true });
+    setSplashStatus("กำลังเชื่อมต่อ LINE...");
+    await promiseTimeout(
+      liff.init({ liffId: LIFF_ID, withLoginOnExternalBrowser: true }),
+      20000,
+      "LIFF init timeout — เปิดผ่านแอป LINE หรือลองใหม่",
+    );
   } catch(err) {
-    document.body.innerHTML = `<p style="padding:24px;text-align:center;font-family:sans-serif">เกิดข้อผิดพลาด กรุณาเปิดผ่าน LINE<br><small style="color:#999">${err.message}</small></p>`;
+    showSplashError("เกิดข้อผิดพลาด: " + (err.message || "เปิดผ่าน LINE"));
     return;
   }
 
-  // 2. Strip LINE OAuth callback params from URL (prevents re-init loops)
-  if (window.location.search) {
-    window.history.replaceState({}, document.title, window.location.pathname);
-  }
-
-  // 3. If not logged into LINE, redirect to login
   if (!liff.isLoggedIn()) {
+    setSplashStatus("กำลังเข้าสู่ระบบ LINE...");
     liff.login({ redirectUri: FRONTEND_BASE_URL });
+    setTimeout(() => {
+      if (document.getElementById("splash")?.style.display !== "none") {
+        showSplashError("เข้าสู่ระบบ LINE ไม่สำเร็จ — กรุณากดลองใหม่ หรือเปิดลิงก์จากแชท LINE");
+      }
+    }, 12000);
     return;
   }
 
-  // 4. Try cached token first (avoid unnecessary re-auth)
+  clearOAuthParamsFromUrl();
+
   const savedToken = localStorage.getItem("vizzel_token");
   if (savedToken) {
     token = savedToken;
-    const ok = await loadCurrentUser();
-    if (ok) { initApp(); return; }
-    // Token expired or invalid — fall through to re-auth
+    setSplashStatus("กำลังโหลดข้อมูล...");
+    try {
+      const ok = await promiseTimeout(loadCurrentUser(), 12000, "โหลดข้อมูลผู้ใช้ช้าเกินไป");
+      if (ok) { safeInitApp(); return; }
+    } catch (_) { /* fall through to LINE auth */ }
     localStorage.removeItem("vizzel_token");
     token = "";
   }
 
-  // 5. Exchange LINE access token for backend JWT
   try {
+    setSplashStatus("กำลังเข้าสู่ระบบ...");
     const lineToken = liff.getAccessToken();
     const email     = liff.getDecodedIDToken()?.email || "";
 
@@ -793,7 +835,7 @@ async function initLiff() {
       method:  "POST",
       headers: { "Content-Type": "application/json" },
       body:    JSON.stringify({ access_token: lineToken, email }),
-    }, 10000);
+    }, 15000);
 
     if (authRes.status === 401) {
       const authData = await authRes.json();
@@ -811,20 +853,21 @@ async function initLiff() {
     token = authData.token;
     localStorage.setItem("vizzel_token", token);
 
-    const ok = await loadCurrentUser();
+    const ok = await promiseTimeout(loadCurrentUser(), 12000, "โหลดข้อมูลผู้ใช้ช้าเกินไป");
     if (!ok) throw new Error("load user failed");
-    initApp();
+    safeInitApp();
 
   } catch(err) {
-    document.body.innerHTML = `
-      <div style="padding:40px;text-align:center;font-family:sans-serif">
-        <p style="font-size:16px;margin-bottom:8px">เข้าสู่ระบบไม่สำเร็จ</p>
-        <p style="font-size:12px;color:#999;margin-bottom:20px">${err.message}</p>
-        <button onclick="localStorage.clear();try{liff.logout();}catch(e){}window.location.reload();"
-          style="background:#06C755;color:white;border:none;padding:12px 28px;border-radius:10px;font-size:15px;cursor:pointer">
-          ลองใหม่
-        </button>
-      </div>`;
+    showSplashError("เข้าสู่ระบบไม่สำเร็จ: " + (err.message || "unknown"));
+  }
+}
+
+function safeInitApp() {
+  try {
+    initApp();
+  } catch (err) {
+    console.error("initApp failed", err);
+    showSplashError("เปิดแอปไม่สำเร็จ: " + (err.message || "unknown"));
   }
 }
 
@@ -954,6 +997,7 @@ async function loadCurrentUser() {
 // Show the app after successful auth + user load.
 function initApp() {
   if (!currentUser?.email_verified) {
+    document.getElementById("splash").style.display = "none";
     showEmailVerifyGate();
     return;
   }
@@ -1107,8 +1151,8 @@ async function loadProjects() {
     const url = `${API_BASE}/projects?` + buildProjectQueryParams().toString();
     const res = await fetchWithTimeout(url, {
       headers: { Authorization: "Bearer " + token },
-    });
-    if (!res.ok) throw new Error();
+    }, 15000);
+    if (!res.ok) throw new Error("projects " + res.status);
     const data = await res.json();
     if (Array.isArray(data)) {
       projects = data;
@@ -1123,11 +1167,13 @@ async function loadProjects() {
       projectsTotalPages = data.total_pages ?? 1;
       statusCounts = data.status_counts || {};
     }
-    renderPipeline();
-    renderProjList();
-  } catch {
+    try { renderPipeline(); } catch (e) { console.error("renderPipeline", e); }
+    try { renderProjList(); } catch (e) { console.error("renderProjList", e); }
+  } catch (e) {
+    console.error("loadProjects", e);
     toast("โหลดข้อมูลไม่สำเร็จ");
-    document.getElementById("pipeGrid").innerHTML = emptyH("⚠️","โหลดไม่สำเร็จ","grid-column:1/-1");
+    const pg = document.getElementById("pipeGrid");
+    if (pg) pg.innerHTML = emptyH("⚠️","โหลดไม่สำเร็จ","grid-column:1/-1");
   }
 }
 
@@ -2812,8 +2858,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function applyRoleMenuVisibility(role) {
   const isSupportOrAdmin = role === "support" || role === "admin";
-  document.getElementById("menuMembers").style.display = isSupportOrAdmin ? "block" : "none";
-  document.getElementById("menuCompany").style.display = isSupportOrAdmin ? "block" : "none";
+  const mm = document.getElementById("menuMembers");
+  const mc = document.getElementById("menuCompany");
+  if (mm) mm.style.display = isSupportOrAdmin ? "block" : "none";
+  if (mc) mc.style.display = isSupportOrAdmin ? "block" : "none";
 }
 
 let _profileBackTarget = null;
@@ -3129,7 +3177,7 @@ document.addEventListener("visibilitychange", () => {
   refreshDetail(detailProjectID);
 });
 
-initLiff();
+initLiff().catch(err => showSplashError("เริ่มระบบไม่สำเร็จ: " + (err.message || "unknown")));
 </script>
 </body>
 </html>
