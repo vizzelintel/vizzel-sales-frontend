@@ -744,7 +744,11 @@ const DOC_NAMES = {
   contract:          "เอกสารสัญญา",
   closing:           "เอกสารปิดงาน",
   site_survey:       "เอกสาร Site Survey",
+  attachment:        "เอกสารประกอบ",
 };
+
+const ATTACHMENT_DOC_TYPE = "attachment";
+const ATTACHMENT_LIMIT = 5;
 
 /* Progress bar: show all pipeline doc slots (dealer sees Support steps as read-only checkmarks). */
 const DOC_TYPES_SEQ = [
@@ -1588,8 +1592,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const projectId = event.data.projectId || detailProjectID;
     if (!projectId) return;
     await refreshDetail(projectId);
+    const isAttachment = event.data.docType === ATTACHMENT_DOC_TYPE;
     const statusLabel = STATUS[currentProject?.status]?.label || "";
-    toast("แนบเอกสารสำเร็จ ✓" + (statusLabel ? ` • สถานะ: ${statusLabel}` : ""));
+    toast("แนบเอกสารสำเร็จ ✓" + (!isAttachment && statusLabel ? ` • สถานะ: ${statusLabel}` : ""));
   });
 
   document.getElementById("createProjectForm").addEventListener("submit", async function(e) {
@@ -1731,17 +1736,14 @@ async function showDetail(id) {
   } catch (e) { /* fetchProjectDocs returns [] on error; this is a safety net */ }
 
   document.getElementById("detailContent").innerHTML =
-    buildDetailHeader(p) +
-    `<div class="sec" style="margin-bottom:7px">เอกสาร</div>
-     <div id="docsSection"><div class="spin-wrap"><div class="spinner"></div></div></div>
-     <div class="sec" style="margin-bottom:7px">เปลี่ยนสถานะ</div>
-     <div id="statusSection"><div class="spin-wrap"><div class="spinner"></div></div></div>`;
+    buildDetailHeader(p) + detailBodyHtml();
 
   try {
     renderDocsSection(docs, id);
   } catch (e) {
     const el = document.getElementById("docsSection");
     if (el) el.innerHTML = `<div class="dcard" style="padding:14px">${emptyH("⚠️","ไม่สามารถโหลดเอกสารได้")}</div>`;
+    try { renderAttachmentsSection(docs, id); } catch (e2) {}
   }
   try {
     renderStatusSection(p, docs);
@@ -2207,14 +2209,41 @@ function hasAppointment(projectID, type) {
   return (projectAppointments[projectID] || []).some(a => a.type === type);
 }
 
+function detailBodyHtml() {
+  return `<div class="sec" style="margin-bottom:7px">เอกสาร</div>
+     <div id="docsSection"><div class="spin-wrap"><div class="spinner"></div></div></div>
+     <div class="sec" style="margin-bottom:7px;margin-top:14px">เอกสารประกอบ</div>
+     <div style="font-size:12px;color:#8e8e93;margin:-4px 0 8px">แนบได้สูงสุด ${ATTACHMENT_LIMIT} ไฟล์ — ไม่เปลี่ยนสถานะงาน</div>
+     <div id="attachmentsSection"><div class="spin-wrap"><div class="spinner"></div></div></div>
+     <div class="sec" style="margin-bottom:7px;margin-top:14px">เปลี่ยนสถานะ</div>
+     <div id="statusSection"><div class="spin-wrap"><div class="spinner"></div></div></div>`;
+}
+
+function renderDocRow(d, isClosed) {
+  return `<div class="doc-row">
+    <div class="doc-icon">${fileIcon(d.file_name)}</div>
+    <div class="doc-info">
+      <div class="doc-type">${esc(DOC_NAMES[d.doc_type] || d.doc_type || "เอกสาร")}</div>
+      <div class="doc-date">${esc(d.file_name || '')}${d.file_name && d.created_at ? ' · ' : ''}${fmtDate(d.created_at)}</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <a class="doc-link" href="${esc(d.file_url)}" target="_blank">ดู ›</a>
+      ${!isClosed ? `<button onclick="deleteDocument('${esc(d.id)}')"
+        style="background:none;border:none;color:#FF3B30;font-size:18px;cursor:pointer;padding:0;line-height:1"
+        title="ลบเอกสาร">🗑</button>` : ""}
+    </div>
+  </div>`;
+}
+
 function renderDocsSection(docs, projectID) {
   const el = document.getElementById("docsSection");
   if (!el) return;
 
   currentDocs = docs;  // keep module-level copy for delete/upload helpers
   const isClosed = currentProject?.status === "closed";
+  const pipelineDocs = docs.filter(d => d.doc_type !== ATTACHMENT_DOC_TYPE);
 
-  const docTypeSet = new Set(docs.map(d => d.doc_type));
+  const docTypeSet = new Set(pipelineDocs.map(d => d.doc_type));
 
   const role = currentUser?.role || "dealer";
   let foundNext = false;
@@ -2238,21 +2267,8 @@ function renderDocsSection(docs, projectID) {
     </div>${arrow}`;
   }).join("");
 
-  const docRows = docs.length
-    ? docs.map(d => `
-        <div class="doc-row">
-          <div class="doc-icon">${fileIcon(d.file_name)}</div>
-          <div class="doc-info">
-            <div class="doc-type">${esc(DOC_NAMES[d.doc_type] || d.doc_type || "เอกสาร")}</div>
-            <div class="doc-date">${esc(d.file_name || '')}${d.file_name && d.created_at ? ' · ' : ''}${fmtDate(d.created_at)}</div>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px">
-            <a class="doc-link" href="${esc(d.file_url)}" target="_blank">ดู ›</a>
-            ${!isClosed ? `<button onclick="deleteDocument('${esc(d.id)}')"
-              style="background:none;border:none;color:#FF3B30;font-size:18px;cursor:pointer;padding:0;line-height:1"
-              title="ลบเอกสาร">🗑</button>` : ""}
-          </div>
-        </div>`).join("")
+  const docRows = pipelineDocs.length
+    ? pipelineDocs.map(d => renderDocRow(d, isClosed)).join("")
     : `<div style="border-top:1px solid #f2f2f7">${emptyH("📎","ยังไม่มีเอกสาร")}</div>`;
 
   el.innerHTML = `
@@ -2260,6 +2276,33 @@ function renderDocsSection(docs, projectID) {
       <div class="doc-progress">${progressItems}</div>
       <div style="border-top:1px solid #f2f2f7">${docRows}</div>
     </div>`;
+
+  renderAttachmentsSection(docs, projectID);
+}
+
+function renderAttachmentsSection(docs, projectID) {
+  const el = document.getElementById("attachmentsSection");
+  if (!el) return;
+
+  const isClosed = currentProject?.status === "closed";
+  const attachments = docs.filter(d => d.doc_type === ATTACHMENT_DOC_TYPE);
+  const canAdd = !isClosed && attachments.length < ATTACHMENT_LIMIT;
+
+  let body = attachments.length
+    ? attachments.map(d => renderDocRow(d, isClosed)).join("")
+    : emptyH("📎", "ยังไม่มีเอกสารประกอบ");
+
+  let uploadBtn = "";
+  if (canAdd) {
+    uploadBtn = `<button class="btn btn-green" style="width:100%;margin-top:12px;font-size:14px"
+      onclick="openDocUpload('${esc(projectID)}','${ATTACHMENT_DOC_TYPE}')">
+      📎 แนบเอกสารประกอบ (${attachments.length}/${ATTACHMENT_LIMIT})
+    </button>`;
+  } else if (!isClosed && attachments.length >= ATTACHMENT_LIMIT) {
+    uploadBtn = `<p style="font-size:12px;color:#8e8e93;text-align:center;margin-top:10px">แนบครบ ${ATTACHMENT_LIMIT} ไฟล์แล้ว — ลบไฟล์เดิมก่อนแนบใหม่</p>`;
+  }
+
+  el.innerHTML = `<div class="dcard" style="overflow:hidden;padding:12px 14px">${body}${uploadBtn}</div>`;
 }
 
 /* ─── Action panels (replaces old status buttons) ─── */
@@ -2603,15 +2646,12 @@ async function refreshDetail(projectId, options = {}) {
   } catch (e) {}
 
   document.getElementById("detailContent").innerHTML =
-    buildDetailHeader(p) +
-    `<div class="sec" style="margin-bottom:7px">เอกสาร</div>
-     <div id="docsSection"><div class="spin-wrap"><div class="spinner"></div></div></div>
-     <div class="sec" style="margin-bottom:7px">เปลี่ยนสถานะ</div>
-     <div id="statusSection"><div class="spin-wrap"><div class="spinner"></div></div></div>`;
+    buildDetailHeader(p) + detailBodyHtml();
 
   try { renderDocsSection(docs, projectId); } catch (e) {
     const el = document.getElementById("docsSection");
     if (el) el.innerHTML = `<div class="dcard" style="padding:14px">${emptyH("⚠️","ไม่สามารถโหลดเอกสารได้")}</div>`;
+    try { renderAttachmentsSection(docs, projectId); } catch (e2) {}
   }
   try { renderStatusSection(p, docs); } catch (e) {
     const el = document.getElementById("statusSection");
@@ -2773,11 +2813,7 @@ async function doChangeStatus(projectID, status, statusNote, rejectReason, appoi
       currentProject = p;
       // Re-render detail: refresh docs so status buttons reflect updated requirements
       document.getElementById("detailContent").innerHTML =
-        buildDetailHeader(p) +
-        `<div class="sec" style="margin-bottom:7px">เอกสาร</div>
-         <div id="docsSection"><div class="spin-wrap"><div class="spinner"></div></div></div>
-         <div class="sec" style="margin-bottom:7px">เปลี่ยนสถานะ</div>
-         <div id="statusSection"><div class="spin-wrap"><div class="spinner"></div></div></div>`;
+        buildDetailHeader(p) + detailBodyHtml();
       let docs = [];
       try { docs = await fetchProjectDocs(projectID); } catch (e) {}
       try {
@@ -2785,6 +2821,7 @@ async function doChangeStatus(projectID, status, statusNote, rejectReason, appoi
       } catch (e) {
         const el = document.getElementById("docsSection");
         if (el) el.innerHTML = `<div class="dcard" style="padding:14px">${emptyH("⚠️","ไม่สามารถโหลดเอกสารได้")}</div>`;
+        try { renderAttachmentsSection(docs, projectID); } catch (e2) {}
       }
       try {
         renderStatusSection(p, docs);
