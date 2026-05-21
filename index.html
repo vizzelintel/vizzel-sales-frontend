@@ -1104,16 +1104,14 @@ document.addEventListener("DOMContentLoaded", () => {
   createProvinceSearch("filterProvince",  "filterProvinceDropdown",  applyFilters);
   createProvinceSearch("newProvince",     "newProvinceDropdown",     null);
 
-  // Refresh document list when upload tab posts UPLOAD_SUCCESS back to this window
-  window.addEventListener("message", function(event) {
+  // Refresh project + docs after upload tab posts UPLOAD_SUCCESS
+  window.addEventListener("message", async function(event) {
     if (!event.data || event.data.type !== "UPLOAD_SUCCESS") return;
-    if (!detailProjectID) return;
-    fetchProjectDocs(detailProjectID).then(docs => {
-      currentDocs = docs;
-      renderDocsSection(docs, detailProjectID);
-      const p = projects.find(x => x.id === detailProjectID);
-      if (p) { renderStatusSection(p, docs); }  // retroPanel populated inside renderStatusSection
-    });
+    const projectId = event.data.projectId || detailProjectID;
+    if (!projectId) return;
+    await refreshDetail(projectId);
+    const statusLabel = STATUS[currentProject?.status]?.label || "";
+    toast("แนบเอกสารสำเร็จ ✓" + (statusLabel ? ` • สถานะ: ${statusLabel}` : ""));
   });
 
   document.getElementById("createProjectForm").addEventListener("submit", async function(e) {
@@ -1674,6 +1672,53 @@ function getNextDocType(project, docs) {
   return null;
 }
 
+// Fetches fresh project + docs from API, rebuilds the detail screen in place.
+// Call after any operation that may have changed project status or documents.
+async function refreshDetail(projectId) {
+  const detailScreen = document.getElementById("screen-detail");
+  if (!detailScreen?.classList.contains("on")) return; // not on detail screen
+
+  // Fetch fresh project from API (auto-advance may have changed status)
+  try {
+    const res = await fetchWithTimeout(`${API}/api/v1/projects/${projectId}`, {
+      headers: { Authorization: "Bearer " + token },
+    });
+    if (res.ok) {
+      const fresh = await res.json();
+      currentProject = fresh;
+      const idx = projects.findIndex(x => x.id === projectId);
+      if (idx >= 0) projects[idx] = fresh;
+    }
+  } catch { /* keep existing currentProject */ }
+
+  const p = currentProject || projects.find(x => x.id === projectId);
+  if (!p) return;
+
+  // Rebuild detail content (same pattern as doChangeStatus / showDetail)
+  document.getElementById("detailContent").innerHTML =
+    buildDetailInfo(p) +
+    buildNoteSection(p) +
+    `<div class="sec" style="margin-bottom:7px">เอกสาร</div>
+     <div id="docsSection"><div class="spin-wrap"><div class="spinner"></div></div></div>
+     <div class="sec" style="margin-bottom:7px">เปลี่ยนสถานะ</div>
+     <div id="statusSection"><div class="spin-wrap"><div class="spinner"></div></div></div>`;
+
+  let docs = [];
+  try { docs = await fetchProjectDocs(projectId); } catch {}
+
+  try { renderDocsSection(docs, projectId); } catch {
+    const el = document.getElementById("docsSection");
+    if (el) el.innerHTML = `<div class="dcard" style="padding:14px">${emptyH("⚠️","ไม่สามารถโหลดเอกสารได้")}</div>`;
+  }
+  try { renderStatusSection(p, docs); } catch {
+    const el = document.getElementById("statusSection");
+    if (el) el.innerHTML = `<p style="color:#8e8e93;font-size:13px;text-align:center;padding:16px">ไม่สามารถโหลดสถานะได้ กรุณารีเฟรช</p>`;
+  }
+
+  renderPipeline();
+  renderProjList();
+}
+
 async function deleteDocument(docId) {
   if (!confirm("ต้องการลบเอกสารนี้ใช่ไหม?")) return;
   try {
@@ -1687,13 +1732,7 @@ async function deleteDocument(docId) {
       return;
     }
     toast("ลบเอกสารสำเร็จ ✓");
-    if (detailProjectID) {
-      const docs = await fetchProjectDocs(detailProjectID);
-      currentDocs = docs;
-      renderDocsSection(docs, detailProjectID);
-      const p = projects.find(x => x.id === detailProjectID);
-      if (p) renderStatusSection(p, docs);
-    }
+    if (detailProjectID) await refreshDetail(detailProjectID);
   } catch {
     toast("ไม่สามารถเชื่อมต่อได้");
   }
@@ -2107,16 +2146,10 @@ function copyInviteCode() {
   toast("คัดลอก Invite Code แล้ว ✓");
 }
 
-// When the user returns from the external upload page, refresh the
-// document list so newly uploaded files appear immediately.
+// When the user returns from the external upload tab, refresh project + docs.
 document.addEventListener("visibilitychange", () => {
   if (document.hidden || !detailProjectID) return;
-  fetchProjectDocs(detailProjectID).then(docs => {
-    currentDocs = docs;
-    renderDocsSection(docs, detailProjectID);
-    const p = projects.find(x => x.id === detailProjectID);
-    if (p) renderStatusSection(p, docs);  // retroPanel populated inside renderStatusSection
-  });
+  refreshDetail(detailProjectID);
 });
 
 initLiff();
