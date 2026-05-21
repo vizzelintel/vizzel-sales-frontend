@@ -173,6 +173,11 @@
     /* ── Misc ── */
     .spin-wrap { display: flex; justify-content: center; padding: 36px 0; }
     .spinner   { width: 28px; height: 28px; border: 3px solid #e5e5ea; border-top-color: #06C755; border-radius: 50%; animation: spin .7s linear infinite; }
+    .btn-spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.35); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; vertical-align: -2px; margin-right: 4px; }
+    .btn.is-loading { opacity: .75; pointer-events: none; }
+    .proj-pagination { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 16px 0 8px; font-size: 13px; color: #636366; }
+    .proj-pagination button { padding: 8px 14px; border-radius: 10px; border: 1.5px solid #e5e5ea; background: white; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
+    .proj-pagination button:disabled { opacity: .4; cursor: default; }
     @keyframes spin { to { transform: rotate(360deg); } }
     .empty { text-align: center; padding: 36px 20px; color: #8e8e93; }
     .empty-icon { font-size: 36px; margin-bottom: 8px; }
@@ -359,6 +364,7 @@
       </div>
 
       <div class="plist" id="projList"></div>
+      <div id="projPagination" class="proj-pagination" style="display:none"></div>
     </div>
 
     <!-- Detail -->
@@ -613,6 +619,12 @@ const API_BASE          = API + "/api/v1";
 
 let token    = "";
 let projects = [];
+let projectsTotal = 0;
+let projectsPage = 1;
+let projectsTotalPages = 1;
+let statusCounts = {};
+let listStatusFilter = "";
+const PROJECTS_PER_PAGE = 10;
 let curTab   = "pipeline";
 let prevTab  = "pipeline";
 let pendingLineId      = "";
@@ -1074,14 +1086,43 @@ async function confirmVerifyOTP() {
 }
 
 /* ─── Data ─── */
-async function loadProjects(queryString = "") {
+function buildProjectQueryParams() {
+  const params = new URLSearchParams();
+  const search     = document.getElementById("searchInput")?.value.trim()     || "";
+  const company    = document.getElementById("filterCompany")?.value          || "";
+  const agencyType = document.getElementById("filterAgencyType")?.value       || "";
+  const province   = document.getElementById("filterProvince")?.value         || "";
+  if (search)     params.set("search",      search);
+  if (company)    params.set("company",     company);
+  if (agencyType) params.set("agency_type", agencyType);
+  if (province)   params.set("province",    province);
+  if (listStatusFilter) params.set("status", listStatusFilter);
+  params.set("page",  String(projectsPage));
+  params.set("limit", String(PROJECTS_PER_PAGE));
+  return params;
+}
+
+async function loadProjects() {
   try {
-    const url = `${API_BASE}/projects${queryString ? "?" + queryString : ""}`;
+    const url = `${API_BASE}/projects?` + buildProjectQueryParams().toString();
     const res = await fetchWithTimeout(url, {
       headers: { Authorization: "Bearer " + token },
     });
     if (!res.ok) throw new Error();
-    projects = await res.json();
+    const data = await res.json();
+    if (Array.isArray(data)) {
+      projects = data;
+      projectsTotal = data.length;
+      projectsPage = 1;
+      projectsTotalPages = 1;
+      statusCounts = {};
+    } else {
+      projects = data.items || [];
+      projectsTotal = data.total ?? projects.length;
+      projectsPage = data.page ?? 1;
+      projectsTotalPages = data.total_pages ?? 1;
+      statusCounts = data.status_counts || {};
+    }
     renderPipeline();
     renderProjList();
   } catch {
@@ -1090,11 +1131,17 @@ async function loadProjects(queryString = "") {
   }
 }
 
+function goProjPage(page) {
+  if (page < 1 || page > projectsTotalPages || page === projectsPage) return;
+  projectsPage = page;
+  loadProjects();
+  document.getElementById("projList")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
 /* ─── Pipeline ─── */
 function renderPipeline() {
   const counts = {};
-  STATUS_KEYS.forEach(s => counts[s] = 0);
-  projects.forEach(p => { if (counts[p.status] !== undefined) counts[p.status]++; });
+  STATUS_KEYS.forEach(s => counts[s] = statusCounts[s] || 0);
 
   document.getElementById("pipeGrid").innerHTML = STATUS_KEYS.map(s => {
     const g = STATUS[s].group;
@@ -1104,24 +1151,55 @@ function renderPipeline() {
     </div>`;
   }).join("");
 
-  const recent = projects.slice(0, 5);
-  document.getElementById("pipeRecent").innerHTML =
-    recent.length ? recent.map(rowH).join("") : emptyH("📂","ยังไม่มีโครงการ");
+  if (projectsPage === 1 && !listStatusFilter) {
+    const recent = projects.slice(0, 5);
+    document.getElementById("pipeRecent").innerHTML =
+      recent.length ? recent.map(rowH).join("") : emptyH("📂","ยังไม่มีโครงการ");
+  }
 }
 
 function filterGo(status) {
-  renderProjList(status);
+  listStatusFilter = status;
+  projectsPage = 1;
+  loadProjects();
   showTab("projects", false);
 }
 
+function clearListStatusFilter() {
+  listStatusFilter = "";
+  projectsPage = 1;
+}
+
 /* ─── Project list ─── */
-function renderProjList(filterStatus) {
-  // Clear search bar when rendering the full unfiltered list
-  const searchEl = document.getElementById("searchInput");
-  if (searchEl && !filterStatus) searchEl.value = "";
-  const list = filterStatus ? projects.filter(p => p.status === filterStatus) : projects;
-  document.getElementById("projList").innerHTML =
-    list.length ? list.map(rowH).join("") : emptyH("📂","ยังไม่มีโครงการ");
+function renderProjList() {
+  let title = "";
+  if (listStatusFilter && STATUS[listStatusFilter]) {
+    title = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <span style="font-size:13px;font-weight:600;color:#636366">สถานะ: ${esc(STATUS[listStatusFilter].label)}</span>
+      <button type="button" onclick="clearListStatusFilter();loadProjects()"
+        style="background:none;border:none;color:#007AFF;font-size:13px;cursor:pointer;font-family:inherit">ล้างตัวกรอง</button>
+    </div>`;
+  }
+
+  document.getElementById("projList").innerHTML = title +
+    (projects.length ? projects.map(rowH).join("") : emptyH("📂","ยังไม่มีโครงการ"));
+  renderProjPagination();
+}
+
+function renderProjPagination() {
+  const el = document.getElementById("projPagination");
+  if (!el) return;
+  if (projectsTotalPages <= 1 && projectsTotal <= PROJECTS_PER_PAGE) {
+    el.style.display = "none";
+    return;
+  }
+  el.style.display = "flex";
+  const from = projectsTotal ? (projectsPage - 1) * PROJECTS_PER_PAGE + 1 : 0;
+  const to = Math.min(projectsPage * PROJECTS_PER_PAGE, projectsTotal);
+  el.innerHTML = `
+    <button type="button" ${projectsPage <= 1 ? "disabled" : ""} onclick="goProjPage(${projectsPage - 1})">‹ ก่อนหน้า</button>
+    <span>หน้า ${projectsPage}/${projectsTotalPages} · ${from}–${to} จาก ${projectsTotal}</span>
+    <button type="button" ${projectsPage >= projectsTotalPages ? "disabled" : ""} onclick="goProjPage(${projectsPage + 1})">ถัดไป ›</button>`;
 }
 
 /* ─── Search + Filters ─── */
@@ -1132,16 +1210,8 @@ function onSearchInput() {
 }
 
 function applyFilters() {
-  const params = new URLSearchParams();
-  const search     = document.getElementById("searchInput")?.value.trim()     || "";
-  const company    = document.getElementById("filterCompany")?.value          || "";
-  const agencyType = document.getElementById("filterAgencyType")?.value       || "";
-  const province   = document.getElementById("filterProvince")?.value         || "";
-  if (search)     params.set("search",      search);
-  if (company)    params.set("company",     company);
-  if (agencyType) params.set("agency_type", agencyType);
-  if (province)   params.set("province",    province);
-  loadProjects(params.toString());
+  projectsPage = 1;
+  loadProjects();
 }
 
 async function loadCompanyFilterOptions() {
@@ -1477,9 +1547,9 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       closeCreateModal();
-      projects.unshift(data);
-      renderPipeline();
-      renderProjList();
+      projectsPage = 1;
+      listStatusFilter = "";
+      await loadProjects();
       showDetail(data.id);
 
     } catch {
@@ -2114,7 +2184,7 @@ function renderStatusSection(p, docs) {
         <textarea id="ap-present-note" placeholder="หมายเหตุ..."
           style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:14px;font-family:inherit;margin-top:6px;outline:none;resize:none;height:70px;box-sizing:border-box"></textarea>
       </div>
-      <button class="btn btn-green" onclick="submitPresent('${iid}')">ยืนยันนัดหมาย Present</button>
+      <button class="btn btn-green" onclick="submitPresent('${iid}', this)">ยืนยันนัดหมาย Present</button>
     </div>`;
 
   } else {
@@ -2205,7 +2275,7 @@ function renderStatusSection(p, docs) {
             <textarea id="ap-demo-note" placeholder="หมายเหตุ..."
               style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:14px;font-family:inherit;margin-top:6px;outline:none;resize:none;height:60px;box-sizing:border-box"></textarea>
           </div>
-          <button class="btn btn-green" style="font-size:14px" onclick="submitDemo('${iid}')">บันทึกนัด Demo</button>
+          <button class="btn btn-green" style="font-size:14px" onclick="submitDemo('${iid}', this)">บันทึกนัด Demo</button>
         </div>
       </div>`;
     }
@@ -2233,7 +2303,7 @@ function renderStatusSection(p, docs) {
             <button class="btn" style="margin-top:6px;background:#f2f2f7;color:#636366;font-size:13px"
               onclick="openDocUpload('${iid}','site_survey')">📎 อัปโหลดไฟล์ Site Survey</button>
           </div>
-          <button class="btn btn-green" style="font-size:14px" onclick="submitSurvey('${iid}')">บันทึกนัด Site Survey</button>
+          <button class="btn btn-green" style="font-size:14px" onclick="submitSurvey('${iid}', this)">บันทึกนัด Site Survey</button>
         </div>
       </div>`;
     }
@@ -2446,16 +2516,32 @@ async function deleteDocument(docId) {
   }
 }
 
-async function submitPresent(projectId) {
+function setBtnLoading(btn, loading, idleText) {
+  if (!btn) return;
+  if (loading) {
+    if (!btn.dataset.idleHtml) btn.dataset.idleHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.classList.add("is-loading");
+    btn.innerHTML = '<span class="btn-spinner"></span> กำลังบันทึก...';
+  } else {
+    btn.disabled = false;
+    btn.classList.remove("is-loading");
+    btn.innerHTML = btn.dataset.idleHtml || idleText || btn.innerHTML;
+    delete btn.dataset.idleHtml;
+  }
+}
+
+async function submitPresent(projectId, btn) {
   const date = document.getElementById("ap-present-date")?.value;
   const type = document.getElementById("ap-present-type")?.value;
   const note = document.getElementById("ap-present-note")?.value.trim() || "";
   if (!date) { toast("กรุณาเลือกวันและเวลานัดหมาย"); return; }
   if (!type) { toast("กรุณาเลือกรูปแบบ (Online/Onsite)"); return; }
-  await doChangeStatus(projectId, "present", note, "", new Date(date).toISOString(), "", type);
+  await doChangeStatus(projectId, "present", note, "", new Date(date).toISOString(), "", type, btn);
 }
 
-async function saveProjectAppointment(projectId, apptType, date, note, presentType) {
+async function saveProjectAppointment(projectId, apptType, date, note, presentType, btn) {
+  setBtnLoading(btn, true);
   try {
     const res = await fetchWithTimeout(`${API}/api/v1/projects/${projectId}/appointments/${apptType}`, {
       method: "PUT",
@@ -2478,6 +2564,8 @@ async function saveProjectAppointment(projectId, apptType, date, note, presentTy
   } catch {
     toast("ไม่สามารถเชื่อมต่อได้");
     return false;
+  } finally {
+    setBtnLoading(btn, false);
   }
 }
 
@@ -2490,18 +2578,18 @@ function showCalendarToast(data) {
   }
 }
 
-async function submitDemo(projectId) {
+async function submitDemo(projectId, btn) {
   const date = document.getElementById("ap-demo-date")?.value;
   const note = document.getElementById("ap-demo-note")?.value.trim() || "";
   if (!date) { toast("กรุณาเลือกวันและเวลา"); return; }
-  await saveProjectAppointment(projectId, "demo", date, note);
+  await saveProjectAppointment(projectId, "demo", date, note, "", btn);
 }
 
-async function submitSurvey(projectId) {
+async function submitSurvey(projectId, btn) {
   const date = document.getElementById("ap-survey-date")?.value;
   const note = document.getElementById("ap-survey-note")?.value.trim() || "";
   if (!date) { toast("กรุณาเลือกวันและเวลา"); return; }
-  await saveProjectAppointment(projectId, "site_survey", date, note);
+  await saveProjectAppointment(projectId, "site_survey", date, note, "", btn);
 }
 
 function openRejectPanel(projectId) {
@@ -2514,7 +2602,8 @@ function openRejectPanel(projectId) {
 let _pendingStatus    = "";
 let _pendingProjectID = "";
 
-async function doChangeStatus(projectID, status, statusNote, rejectReason, appointmentDate, appointmentNote, presentType) {
+async function doChangeStatus(projectID, status, statusNote, rejectReason, appointmentDate, appointmentNote, presentType, btn) {
+  setBtnLoading(btn, true);
   try {
     const res = await fetchWithTimeout(`${API}/api/v1/projects/${projectID}/status`, {
       method: "PUT",
@@ -2552,8 +2641,7 @@ async function doChangeStatus(projectID, status, statusNote, rejectReason, appoi
       await fetchProjectAppointments(projectID);
     }
 
-    renderPipeline();
-    renderProjList();
+    await loadProjects();
     if (p) {
       currentProject = p;
       // Re-render detail: refresh docs so status buttons reflect updated requirements
@@ -2579,6 +2667,7 @@ async function doChangeStatus(projectID, status, statusNote, rejectReason, appoi
       }
     }
   } catch { toast("เปลี่ยนสถานะไม่สำเร็จ"); }
+  } finally { setBtnLoading(btn, false); }
 }
 
 /* ─── Overlay: document upload — uses getNextDocType for smart determination ─── */
