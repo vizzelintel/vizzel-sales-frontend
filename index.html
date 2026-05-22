@@ -125,9 +125,13 @@
     .dval a { color: var(--vi-blue-dark); text-decoration: none; }
 
     /* ── Detail tabs (mobile) ── */
-    .detail-hero { background: white; border-radius: 12px; padding: 14px; margin-bottom: 10px; box-shadow: var(--vi-shadow); }
-    .detail-hero h2 { font-size: 17px; font-weight: 700; line-height: 1.35; margin-bottom: 6px; word-break: break-word; }
-    .detail-hero-meta { font-size: 13px; color: var(--vi-muted); display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+    .detail-hero { background: white; border-radius: 14px; padding: 18px 16px 16px; margin-bottom: 12px; box-shadow: var(--vi-shadow); display: flex; flex-direction: column; gap: 0; }
+    .detail-hero h2 { font-size: 18px; font-weight: 700; line-height: 1.4; margin: 0 0 14px; word-break: break-word; color: var(--vi-blue-dark, #1a1a2e); }
+    .detail-hero-status { margin-bottom: 12px; }
+    .detail-hero-sub { font-size: 13px; color: var(--vi-muted); line-height: 1.55; display: flex; flex-direction: column; gap: 8px; }
+    .detail-hero-sub-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+    .detail-hero-countdown { margin-top: 14px; margin-bottom: 0; border-radius: 10px; padding: 11px 14px; font-size: 13px; display: flex; align-items: center; gap: 10px; line-height: 1.45; }
+    .detail-hero-phone { color: var(--vi-blue-dark); font-weight: 600; text-decoration: none; }
     .detail-tabs { display: flex; gap: 6px; margin-bottom: 12px; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 2px; }
     .dtab { flex: 1; min-width: 72px; padding: 10px 6px; border: none; border-radius: 10px; background: white; font-size: 12px; font-weight: 600; color: var(--vi-muted); font-family: inherit; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,.06); white-space: nowrap; }
     .dtab.on { background: var(--vi-gradient); color: white; box-shadow: 0 2px 8px rgba(123, 63, 242, .25); }
@@ -225,7 +229,7 @@
   <p class="splash-sub">ระบบจัดการลูกค้า<br>หน่วยงานราชการ</p>
   <div class="splash-spinner" id="splashSpinner"></div>
   <p id="splashStatus" style="font-size:13px;color:#8e8e93;margin-top:12px">กำลังโหลด...</p>
-  <p id="splashVersion" style="font-size:11px;color:#94a3b8;margin-top:6px">v20260522f</p>
+  <p id="splashVersion" style="font-size:11px;color:#94a3b8;margin-top:6px">v20260522g</p>
   <p id="splashErr" class="splash-err" style="display:none"></p>
   <button id="splashRetry" type="button" style="display:none;margin-top:14px;background:linear-gradient(135deg,#7B3FF2,#00A8E8);color:white;border:none;padding:12px 28px;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit"
     onclick="localStorage.removeItem('vizzel_token');try{liff.logout();}catch(e){}window.location.reload();">ลองใหม่</button>
@@ -2134,18 +2138,18 @@ function buildDetailCompactHero(p) {
   const st = pipelineStatusKey(p.status);
   const grp = STATUS[st]?.group || "gray";
   const label = STATUS[st]?.label || p.status;
-  const phone = p.contact_phone
-    ? `<a href="tel:${esc(p.contact_phone)}" style="color:var(--vi-blue-dark);font-weight:600;text-decoration:none">📞 ${esc(p.contact_phone)}</a>`
+  const phone = (p.contact_phone && String(p.contact_phone).trim() && p.contact_phone !== "-")
+    ? `<a href="tel:${esc(p.contact_phone)}" class="detail-hero-phone">📞 ${esc(p.contact_phone)}</a>`
     : "";
   const sub = [p.region, p.agency_type].filter(Boolean).map(esc).join(" · ");
   return `<div class="detail-hero">
     <h2>${esc(p.agency_name || "-")}</h2>
-    <div class="detail-hero-meta">
-      <span class="bdg bg-${grp}">${esc(label)}</span>
-      ${sub ? `<span>${sub}</span>` : ""}
-      ${phone}
+    <div class="detail-hero-status"><span class="bdg bg-${grp}">${esc(label)}</span></div>
+    <div class="detail-hero-sub">
+      ${sub ? `<div class="detail-hero-sub-row"><span>${sub}</span></div>` : ""}
+      ${phone ? `<div class="detail-hero-sub-row">${phone}</div>` : ""}
     </div>
-    ${buildCountdownBanner(p)}
+    ${buildCountdownBanner(p, true)}
   </div>`;
 }
 
@@ -2462,7 +2466,7 @@ function buildNoteSection(p) {
   </div>`;
 }
 
-function buildCountdownBanner(p) {
+function buildCountdownBanner(p, inHero) {
   const exempt = ["contract", "closed", "reject"];
   if (exempt.includes(p.status) || !p.auto_reject_at) return "";
 
@@ -2476,8 +2480,9 @@ function buildCountdownBanner(p) {
     ? `เหลือเวลา <strong>${daysLeft} วัน</strong> ก่อนปิดอัตโนมัติ`
     : "เกินกำหนดแล้ว — จะถูกปิดในรอบถัดไป";
 
-  return `<div style="background:${bg};color:${color};border-radius:10px;padding:10px 14px;
-                       font-size:13px;display:flex;align-items:center;gap:8px;margin-bottom:12px">
+  const cls = inHero ? "detail-hero-countdown" : "";
+  const margin = inHero ? "" : "margin-bottom:12px;";
+  return `<div class="${cls}" style="background:${bg};color:${color};${margin}">
     ${icon} <span>${msg}</span>
   </div>`;
 }
