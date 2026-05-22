@@ -229,7 +229,7 @@
   <p class="splash-sub">ระบบจัดการลูกค้า<br>หน่วยงานราชการ</p>
   <div class="splash-spinner" id="splashSpinner"></div>
   <p id="splashStatus" style="font-size:13px;color:#8e8e93;margin-top:12px">กำลังโหลด...</p>
-  <p id="splashVersion" style="font-size:11px;color:#94a3b8;margin-top:6px">v20260522g</p>
+  <p id="splashVersion" style="font-size:11px;color:#94a3b8;margin-top:6px">v20260522h</p>
   <p id="splashErr" class="splash-err" style="display:none"></p>
   <button id="splashRetry" type="button" style="display:none;margin-top:14px;background:linear-gradient(135deg,#7B3FF2,#00A8E8);color:white;border:none;padding:12px 28px;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit"
     onclick="localStorage.removeItem('vizzel_token');try{liff.logout();}catch(e){}window.location.reload();">ลองใหม่</button>
@@ -2311,6 +2311,9 @@ function apptCount(projectID, type) {
 function buildAppointmentsSection(p) {
   const isClosed = p.status === "closed" || p.status === "reject";
   const iid = esc(p.id);
+  const apptHint = `<div style="font-size:12px;color:#636366;line-height:1.5;margin-bottom:12px;padding:10px 12px;background:#f5f5f8;border-radius:10px">
+    นัดได้สูงสุด <strong>10 ครั้ง</strong> ต่อประเภท · Lark เก็บ<strong>นัดล่าสุด</strong>ในคอลัมน์วันที่ + รายการครบใน「สรุปนัดหมาย」
+  </div>`;
   const blocks = APPT_DISPLAY_ORDER.map(({ type, label, icon, btn }) => {
     const list = appointmentsOfType(p.id, type);
     const cnt = list.length;
@@ -2365,8 +2368,9 @@ function buildAppointmentsSection(p) {
   }).join("");
 
   return `<div class="dcard" style="margin-bottom:12px;padding:16px">
+    ${apptHint}
     <div style="font-size:12px;color:#8e8e93;margin-bottom:12px;line-height:1.45">
-      เพิ่มได้สูงสุด ${MAX_APPTS_PER_TYPE} ครั้งต่อประเภท · ไม่เปลี่ยนสถานะงาน
+      ไม่เปลี่ยนสถานะ Pipeline เมื่อเพิ่มนัด
     </div>
     ${blocks}
   </div>`;
