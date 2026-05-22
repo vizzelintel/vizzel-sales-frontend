@@ -683,7 +683,7 @@
 const FRONTEND_BASE_URL = "https://vizzelintel.github.io/vizzel-sales-frontend/";
 const LIFF_ID           = "2010133685-tke1EWht";
 const LIFF_OPEN_URL     = "https://liff.line.me/" + LIFF_ID;
-const APP_BOOT_VERSION  = "20260521j";
+const APP_BOOT_VERSION  = "20260522h";
 const API               = "https://vizzel-sales-api.fly.dev";
 const API_BASE          = API + "/api/v1";
 
@@ -1705,13 +1705,19 @@ function renderDetailMembers(members) {
         <div style="font-size:12px;color:#8e8e93;margin-top:2px">${esc(m.email || "-")}${m.phone ? " · " + esc(m.phone) : ""}</div>
       </div>
       ${isAdmin
-        ? `<select onchange="changeMemberRole('${esc(m.id)}', this.value)"
-             style="padding:6px 10px;border-radius:8px;border:1.5px solid #e5e5ea;font-size:13px;font-family:inherit;outline:none;flex-shrink:0"
-             ${m.id === currentUser?.id ? "disabled" : ""}>
-             <option value="dealer"  ${m.role==="dealer" ?"selected":""}>Dealer</option>
-             <option value="support" ${m.role==="support"?"selected":""}>Support</option>
-             <option value="admin"   ${m.role==="admin"  ?"selected":""}>Admin</option>
-           </select>`
+        ? `<div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+             <select onchange="changeMemberRole('${esc(m.id)}', this.value)"
+               style="padding:6px 10px;border-radius:8px;border:1.5px solid #e5e5ea;font-size:13px;font-family:inherit;outline:none"
+               ${m.id === currentUser?.id ? "disabled" : ""}>
+               <option value="dealer"  ${m.role==="dealer" ?"selected":""}>Dealer</option>
+               <option value="support" ${m.role==="support"?"selected":""}>Support</option>
+               <option value="admin"   ${m.role==="admin"  ?"selected":""}>Admin</option>
+             </select>
+             ${m.id !== currentUser?.id
+               ? `<button type="button" onclick="deleteMember('${esc(m.id)}', ${JSON.stringify((m.first_name + " " + m.last_name).trim() || m.full_name || "")})"
+                    style="border:1px solid #FFCDD2;background:#FFEBEE;color:#C62828;font-size:12px;padding:6px 10px;border-radius:8px;cursor:pointer;font-family:inherit">ลบ</button>`
+               : ""}
+           </div>`
         : `<span style="background:#e4f9ec;color:#34C759;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600;flex-shrink:0">${esc(m.role||"")}</span>`}
     </div>`).join("");
 }
@@ -1961,8 +1967,10 @@ async function showDetail(id) {
 
   let docs = [];
   try {
-    await fetchProjectAppointments(id);
-    const fetchedDocs = await fetchProjectDocs(id);
+    const [, fetchedDocs] = await Promise.all([
+      fetchProjectAppointments(id),
+      fetchProjectDocs(id),
+    ]);
     docs = fetchedDocs;
     currentDocs = docs;
   } catch (e) { /* fetchProjectDocs returns [] on error; this is a safety net */ }
@@ -2028,7 +2036,7 @@ function startDetailRefresh(projectId) {
         document.getElementById("screen-detail")?.classList.contains("on")) {
       refreshDetail(projectId, { light: true });
     }
-  }, 30000);
+  }, 60000);
 }
 
 function stopDetailRefresh() {
@@ -2311,9 +2319,7 @@ function apptCount(projectID, type) {
 function buildAppointmentsSection(p) {
   const isClosed = p.status === "closed" || p.status === "reject";
   const iid = esc(p.id);
-  const apptHint = `<div style="font-size:12px;color:#636366;line-height:1.5;margin-bottom:12px;padding:10px 12px;background:#f5f5f8;border-radius:10px">
-    นัดได้สูงสุด <strong>10 ครั้ง</strong> ต่อประเภท · Lark เก็บ<strong>นัดล่าสุด</strong>ในคอลัมน์วันที่ + รายการครบใน「สรุปนัดหมาย」
-  </div>`;
+  const apptHint = `<div style="font-size:12px;color:#636366;margin-bottom:12px">นัดได้สูงสุด <strong>10 ครั้ง</strong> ต่อประเภท</div>`;
   const blocks = APPT_DISPLAY_ORDER.map(({ type, label, icon, btn }) => {
     const list = appointmentsOfType(p.id, type);
     const cnt = list.length;
@@ -2369,9 +2375,6 @@ function buildAppointmentsSection(p) {
 
   return `<div class="dcard" style="margin-bottom:12px;padding:16px">
     ${apptHint}
-    <div style="font-size:12px;color:#8e8e93;margin-bottom:12px;line-height:1.45">
-      ไม่เปลี่ยนสถานะ Pipeline เมื่อเพิ่มนัด
-    </div>
     ${blocks}
   </div>`;
 }
@@ -2897,11 +2900,21 @@ async function refreshDetail(projectId, options = {}) {
     docs = fetchedDocs;
   } catch (e) {}
 
-  renderDetailPanels(p, docs);
-
-  if (!light) {
-    await reloadProjectViews();
+  if (light) {
+    upsertLocalProject(p);
+    const hero = document.querySelector(".detail-hero");
+    if (hero) hero.outerHTML = buildDetailCompactHero(p);
+    if (detailSubTab === "appt") {
+      const panel = document.getElementById("detail-panel-appt");
+      if (panel) panel.innerHTML = buildAppointmentsSection(p);
+    } else if (detailSubTab === "docs") {
+      try { renderDocsSection(docs, p.id); renderAttachmentsSection(docs, p.id); } catch (e) {}
+    }
+    return;
   }
+
+  renderDetailPanels(p, docs);
+  upsertLocalProject(p);
 }
 
 async function deleteDocument(docId) {
@@ -3447,13 +3460,19 @@ function renderMembers(members) {
           <div style="font-size:12px;color:#8e8e93;margin-top:1px">${esc(m.region || "")}</div>
         </div>
         ${isAdmin
-          ? `<select onchange="changeMemberRole('${esc(m.id)}', this.value)"
-               style="padding:6px 10px;border-radius:8px;border:1.5px solid #e5e5ea;font-size:13px;font-family:inherit;outline:none"
-               ${m.id === currentUser?.id ? "disabled" : ""}>
-               <option value="dealer"  ${m.role==="dealer" ?"selected":""}>Dealer</option>
-               <option value="support" ${m.role==="support"?"selected":""}>Support</option>
-               <option value="admin"   ${m.role==="admin"  ?"selected":""}>Admin</option>
-             </select>`
+          ? `<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">
+               <select onchange="changeMemberRole('${esc(m.id)}', this.value)"
+                 style="padding:6px 10px;border-radius:8px;border:1.5px solid #e5e5ea;font-size:13px;font-family:inherit;outline:none"
+                 ${m.id === currentUser?.id ? "disabled" : ""}>
+                 <option value="dealer"  ${m.role==="dealer" ?"selected":""}>Dealer</option>
+                 <option value="support" ${m.role==="support"?"selected":""}>Support</option>
+                 <option value="admin"   ${m.role==="admin"  ?"selected":""}>Admin</option>
+               </select>
+               ${m.id !== currentUser?.id
+                 ? `<button type="button" onclick="deleteMember('${esc(m.id)}', ${JSON.stringify((m.first_name + " " + m.last_name).trim() || m.full_name || "")})"
+                      style="border:1px solid #FFCDD2;background:#FFEBEE;color:#C62828;font-size:12px;padding:6px 12px;border-radius:8px;cursor:pointer;font-family:inherit;width:100%">ลบพนักงาน</button>`
+                 : ""}
+             </div>`
           : `<span style="background:#e4f9ec;color:#34C759;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600">${esc(m.role||"")}</span>`}
       </div>
     </div>`).join("");
@@ -3471,10 +3490,32 @@ async function changeMemberRole(userId, newRole) {
   } catch (e) { toast("เปลี่ยน role ไม่สำเร็จ"); }
 }
 
+async function deleteMember(userId, displayName) {
+  const name = (displayName || "").trim() || "พนักงานคนนี้";
+  if (!confirm(`ลบพนักงาน "${name}" ออกจากบริษัทใช่หรือไม่?`)) return;
+  if (!confirm("ยืนยันอีกครั้ง: การลบไม่สามารถยกเลิกได้")) return;
+  try {
+    const res = await fetchWithTimeout(`${API_BASE}/company/members/${userId}`, {
+      method: "DELETE",
+      headers: { Authorization: "Bearer " + token },
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      toast(data.error || "ลบพนักงานไม่สำเร็จ");
+      return;
+    }
+    toast("ลบพนักงานแล้ว ✓");
+    loadMembers();
+    if (currentCompanyDetail?.id) loadCompanyDetail(currentCompanyDetail.id);
+  } catch (e) {
+    toast("ไม่สามารถเชื่อมต่อได้");
+  }
+}
+
 // When the user returns from the external upload tab, refresh project + docs.
 document.addEventListener("visibilitychange", () => {
   if (document.hidden || !detailProjectID || shouldPauseDetailRefresh()) return;
-  refreshDetail(detailProjectID);
+  refreshDetail(detailProjectID, { light: true });
 });
 
 async function bootApp() {
