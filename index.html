@@ -225,7 +225,7 @@
   <p class="splash-sub">ระบบจัดการลูกค้า<br>หน่วยงานราชการ</p>
   <div class="splash-spinner" id="splashSpinner"></div>
   <p id="splashStatus" style="font-size:13px;color:#8e8e93;margin-top:12px">กำลังโหลด...</p>
-  <p id="splashVersion" style="font-size:11px;color:#94a3b8;margin-top:6px">v20260522d</p>
+  <p id="splashVersion" style="font-size:11px;color:#94a3b8;margin-top:6px">v20260522e</p>
   <p id="splashErr" class="splash-err" style="display:none"></p>
   <button id="splashRetry" type="button" style="display:none;margin-top:14px;background:linear-gradient(135deg,#7B3FF2,#00A8E8);color:white;border:none;padding:12px 28px;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit"
     onclick="localStorage.removeItem('vizzel_token');try{liff.logout();}catch(e){}window.location.reload();">ลองใหม่</button>
@@ -2152,10 +2152,10 @@ function buildDetailCompactHero(p) {
 function buildDetailTabBar(p) {
   const apptN = (projectAppointments[p.id] || []).length;
   const tabs = [
-    { id: "work", label: "งาน" },
-    { id: "appt", label: apptN ? `นัด ${apptN}` : "นัดหมาย" },
-    { id: "docs", label: "เอกสาร" },
     { id: "info", label: "ข้อมูล" },
+    { id: "work", label: "อัพเดทงาน" },
+    { id: "appt", label: apptN ? `นัดหมาย ${apptN}` : "นัดหมาย" },
+    { id: "docs", label: "เอกสาร" },
   ];
   return `<div class="detail-tabs">${tabs.map(t =>
     `<button type="button" class="dtab${detailSubTab === t.id ? " on" : ""}" data-tab="${t.id}" onclick="switchDetailTab('${t.id}')">${t.label}</button>`
@@ -2292,9 +2292,9 @@ async function saveProjectInfo() {
 }
 
 const APPT_DISPLAY_ORDER = [
-  { type: "present", label: "พรีเซ็น (Present)", icon: "🎯" },
-  { type: "demo", label: "Demo", icon: "🖥" },
-  { type: "site_survey", label: "Site Survey", icon: "📍" },
+  { type: "present", label: "พรีเซ็น", icon: "🎯", btn: "นัดหมายพรีเซ็น" },
+  { type: "demo", label: "Demo", icon: "🖥", btn: "นัดหมาย Demo" },
+  { type: "site_survey", label: "Site Survey", icon: "📍", btn: "นัดหมาย Site Survey" },
 ];
 
 function appointmentsOfType(projectID, type) {
@@ -2308,7 +2308,7 @@ function apptCount(projectID, type) {
 function buildAppointmentsSection(p) {
   const isClosed = p.status === "closed" || p.status === "reject";
   const iid = esc(p.id);
-  const blocks = APPT_DISPLAY_ORDER.map(({ type, label, icon }) => {
+  const blocks = APPT_DISPLAY_ORDER.map(({ type, label, icon, btn }) => {
     const list = appointmentsOfType(p.id, type);
     const cnt = list.length;
     const items = list.length
@@ -2316,6 +2316,16 @@ function buildAppointmentsSection(p) {
           let extra = "";
           if (type === "present" && a.present_type) {
             extra = ` · ${a.present_type === "online" ? "Online" : "Onsite"}`;
+          }
+          let meetLine = "";
+          if (type === "present" && a.present_type === "online") {
+            if (a.meet_link) {
+              meetLine = `<div style="margin-top:4px"><a href="${esc(a.meet_link)}" target="_blank" style="color:var(--vi-blue-dark);font-size:13px;font-weight:600">🔗 เข้าห้อง Meet</a></div>`;
+            } else if (a.meet_setup === "vizzel") {
+              meetLine = `<div style="font-size:12px;color:#FF9500;margin-top:4px">⏳ รอทีม Vizzel สร้าง Meet</div>`;
+            } else if (a.meet_setup === "self") {
+              meetLine = `<div style="font-size:12px;color:#8e8e93;margin-top:4px">ห้อง Meet: สร้างเอง${a.id ? ` · <button type="button" onclick="promptMeetLink('${iid}','${esc(a.id)}')" style="border:none;background:none;color:var(--vi-purple);font-size:12px;cursor:pointer;font-family:inherit;padding:0">แนบลิงก์</button>` : ""}</div>`;
+            }
           }
           const delBtn = (!isClosed && a.id)
             ? `<button type="button" onclick="deleteProjectAppointment('${iid}','${esc(a.id)}')"
@@ -2326,6 +2336,7 @@ function buildAppointmentsSection(p) {
               <div style="font-size:12px;color:#8e8e93">ครั้งที่ ${idx + 1}</div>
               <div style="font-size:14px;color:#1c1c1e;margin-top:2px">📅 ${esc(fmtDateTimeLocal(a.scheduled_at))}${extra}</div>
               ${a.note ? `<div style="font-size:12px;color:#636366;margin-top:4px;white-space:pre-wrap">${esc(a.note)}</div>` : ""}
+              ${meetLine}
             </div>
             ${delBtn}
           </div>`;
@@ -2336,7 +2347,7 @@ function buildAppointmentsSection(p) {
     const addBlock = canAdd ? `
       <button type="button" onclick="toggleActionPanel('appt-add-${type}','appt-arrow-${type}')"
         style="width:100%;margin-top:8px;padding:10px 12px;border:1.5px dashed #7B3FF2;border-radius:10px;background:#F8F5FF;color:#7B3FF2;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">
-        <span id="appt-arrow-${type}">›</span> + เพิ่ม${esc(label)} (${cnt}/${MAX_APPTS_PER_TYPE})
+        <span id="appt-arrow-${type}">›</span> ${esc(btn)} (${cnt}/${MAX_APPTS_PER_TYPE})
       </button>
       <div id="appt-add-${type}" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid #f2f2f7">
         ${buildApptAddForm(type, iid)}
@@ -2358,16 +2369,36 @@ function buildAppointmentsSection(p) {
   </div>`;
 }
 
+function togglePresentMeetOptions() {
+  const pt = document.getElementById("ap-present-type")?.value;
+  const wrap = document.getElementById("ap-present-meet-wrap");
+  if (wrap) wrap.style.display = pt === "online" ? "block" : "none";
+}
+
 function buildApptAddForm(type, projectId) {
   const presentExtra = type === "present" ? `
     <div style="margin-bottom:10px">
       <div class="ap-lbl">รูปแบบ *</div>
-      <select id="ap-${type}-type"
+      <select id="ap-${type}-type" onchange="togglePresentMeetOptions()"
         style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;margin-top:6px;outline:none;appearance:none;background:white;box-sizing:border-box">
         <option value="">-- เลือกรูปแบบ --</option>
         <option value="online">🖥 Online</option>
         <option value="onsite">🏢 Onsite</option>
       </select>
+    </div>
+    <div id="ap-present-meet-wrap" style="display:none;margin-bottom:10px;padding:12px;background:#f9f9fb;border-radius:10px">
+      <div class="ap-lbl" style="margin-bottom:8px">ห้อง Google Meet (Online)</div>
+      <label style="display:block;font-size:13px;margin-bottom:8px;cursor:pointer">
+        <input type="radio" name="ap-present-meet-setup" value="self" checked style="margin-right:6px">
+        สร้างห้องเอง / แนบลิงก์ทีหลังได้
+      </label>
+      <label style="display:block;font-size:13px;margin-bottom:10px;cursor:pointer">
+        <input type="radio" name="ap-present-meet-setup" value="vizzel" style="margin-right:6px">
+        ให้ทีม Vizzel สร้าง Meet (อัปเดตลิงก์ใน Lark)
+      </label>
+      <input type="url" id="ap-present-meet-link" placeholder="https://meet.google.com/... (ถ้ามีแล้ว)"
+        style="width:100%;padding:10px;border-radius:8px;border:1px solid #e5e5ea;font-size:14px;box-sizing:border-box;font-family:inherit">
+      <div style="font-size:11px;color:#8e8e93;margin-top:6px;line-height:1.4">ถ้าเลือก Vizzel ทีมจะสร้างห้องและใส่ลิงก์ใน Lark — dealer คนอื่นจะเห็นเมื่อ sync</div>
     </div>` : "";
   return `
     <div style="margin-bottom:10px">
@@ -2899,15 +2930,41 @@ function setBtnLoading(btn, loading, idleText) {
   }
 }
 
+async function promptMeetLink(projectId, apptId) {
+  const link = prompt("วางลิงก์ Google Meet:", "https://meet.google.com/");
+  if (link === null) return;
+  try {
+    const res = await fetchWithTimeout(`${API_BASE}/projects/${projectId}/appointments/${apptId}`, {
+      method: "PATCH",
+      headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
+      body: JSON.stringify({ meet_link: link.trim() }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) { toast(data.error || "อัปเดตลิงก์ไม่สำเร็จ"); return; }
+    toast("บันทึกลิงก์ Meet แล้ว ✓");
+    await fetchProjectAppointments(projectId);
+    if (detailProjectID === projectId) {
+      const p = currentProject || findLocalProject(projectId);
+      if (p) renderDetailPanels(p, currentDocs || []);
+    }
+  } catch (e) { toast("ไม่สามารถเชื่อมต่อได้"); }
+}
+
 async function submitAppt(projectId, apptType, btn) {
   const date = document.getElementById(`ap-${apptType}-date`)?.value;
   const note = document.getElementById(`ap-${apptType}-note`)?.value.trim() || "";
   const presentType = apptType === "present"
     ? (document.getElementById(`ap-${apptType}-type`)?.value || "")
     : "";
+  let meetSetup = "";
+  let meetLink = "";
+  if (apptType === "present" && presentType === "online") {
+    meetSetup = document.querySelector('input[name="ap-present-meet-setup"]:checked')?.value || "self";
+    meetLink = document.getElementById("ap-present-meet-link")?.value.trim() || "";
+  }
   if (!date) { toast("กรุณาเลือกวันและเวลา"); return; }
   if (apptType === "present" && !presentType) { toast("กรุณาเลือกรูปแบบ Online/Onsite"); return; }
-  const ok = await saveProjectAppointment(projectId, apptType, date, note, presentType, btn);
+  const ok = await saveProjectAppointment(projectId, apptType, date, note, presentType, meetSetup, meetLink, btn);
   if (ok) {
     document.getElementById(`ap-${apptType}-date`).value = "";
     if (document.getElementById(`ap-${apptType}-note`)) document.getElementById(`ap-${apptType}-note`).value = "";
@@ -2939,17 +2996,20 @@ async function deleteProjectAppointment(projectId, apptId) {
   }
 }
 
-async function saveProjectAppointment(projectId, apptType, date, note, presentType, btn) {
+async function saveProjectAppointment(projectId, apptType, date, note, presentType, meetSetup, meetLink, btn) {
   setBtnLoading(btn, true);
   try {
+    const body = {
+      scheduled_at: new Date(date).toISOString(),
+      note: note || "",
+      present_type: presentType || "",
+    };
+    if (meetSetup) body.meet_setup = meetSetup;
+    if (meetLink) body.meet_link = meetLink;
     const res = await fetchWithTimeout(`${API_BASE}/projects/${projectId}/appointments/${apptType}`, {
       method: "POST",
       headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        scheduled_at: new Date(date).toISOString(),
-        note: note || "",
-        present_type: presentType || "",
-      }),
+      body: JSON.stringify(body),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
