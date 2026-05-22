@@ -215,7 +215,7 @@
   <p class="splash-sub">ระบบจัดการลูกค้า<br>หน่วยงานราชการ</p>
   <div class="splash-spinner" id="splashSpinner"></div>
   <p id="splashStatus" style="font-size:13px;color:#8e8e93;margin-top:12px">กำลังโหลด...</p>
-  <p id="splashVersion" style="font-size:11px;color:#94a3b8;margin-top:6px">v20260521j</p>
+  <p id="splashVersion" style="font-size:11px;color:#94a3b8;margin-top:6px">v20260522b</p>
   <p id="splashErr" class="splash-err" style="display:none"></p>
   <button id="splashRetry" type="button" style="display:none;margin-top:14px;background:linear-gradient(135deg,#7B3FF2,#00A8E8);color:white;border:none;padding:12px 28px;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit"
     onclick="localStorage.removeItem('vizzel_token');try{liff.logout();}catch(e){}window.location.reload();">ลองใหม่</button>
@@ -700,6 +700,26 @@ let currentProject  = null;
 let currentDocs     = [];
 let currentUser     = null;
 let verifyCooldownUntil = 0;
+const OTP_COOLDOWN_SEC = 60;
+const MAX_APPTS_PER_TYPE = 10;
+
+function startOtpCountdown(btnId, seconds = OTP_COOLDOWN_SEC) {
+  const btn = document.getElementById(btnId);
+  if (!btn) return;
+  let left = seconds;
+  btn.disabled = true;
+  const tick = () => {
+    if (left <= 0) {
+      btn.disabled = false;
+      btn.textContent = "ส่งรหัส OTP";
+      return;
+    }
+    btn.textContent = `ส่งใหม่ได้ใน ${left} วินาที`;
+    left -= 1;
+    setTimeout(tick, 1000);
+  };
+  tick();
+}
 
 async function fetchWithTimeout(url, options = {}, timeoutMs = 8000) {
   const controller = new AbortController();
@@ -1220,15 +1240,16 @@ async function sendVerifyOTP() {
       errEl.textContent = data.error || "ส่งรหัสไม่สำเร็จ";
       errEl.style.display = "block";
     } else {
-      verifyCooldownUntil = Date.now() + 60000;
-      hintEl.textContent = "ส่ง OTP แล้ว กรุณาตรวจอีเมลและกรอกรหัส 6 หลัก";
+      verifyCooldownUntil = Date.now() + OTP_COOLDOWN_SEC * 1000;
+      hintEl.textContent = "ส่ง OTP แล้ว กรุณาตรวจอีเมลและกรอกรหัส 6 หลัก (รอ " + OTP_COOLDOWN_SEC + " วินาทีก่อนส่งซ้ำ)";
       if (data.debug_otp) hintEl.textContent += ` (DEV OTP: ${data.debug_otp})`;
       toast("ส่ง OTP สำเร็จ ✓");
+      startOtpCountdown("verifySendBtn");
+      return;
     }
   } catch (e) {
     errEl.textContent = "ไม่สามารถเชื่อมต่อได้";
     errEl.style.display = "block";
-  } finally {
     btn.disabled = false;
     btn.textContent = "ส่งรหัส OTP";
   }
@@ -1894,18 +1915,17 @@ function rowH(p) {
 async function showDetail(id) {
   prevTab = curTab;
   detailProjectID = id;
-  let p = findLocalProject(id);
-  if (!p) {
-    try {
-      const res = await fetchWithTimeout(`${API_BASE}/projects/${id}`, {
-        headers: { Authorization: "Bearer " + token },
-      });
-      if (res.ok) {
-        p = await res.json();
-        upsertLocalProject(p);
-      }
-    } catch (e) {}
-  }
+  let p = null;
+  try {
+    const res = await fetchWithTimeout(`${API_BASE}/projects/${id}`, {
+      headers: { Authorization: "Bearer " + token },
+    });
+    if (res.ok) {
+      p = await res.json();
+      upsertLocalProject(p);
+    }
+  } catch (e) {}
+  if (!p) p = findLocalProject(id);
   if (!p) { toast("ไม่พบโครงการ"); return; }
 
   currentProject = p;
@@ -1914,10 +1934,8 @@ async function showDetail(id) {
 
   let docs = [];
   try {
-    const [, fetchedDocs] = await Promise.all([
-      fetchProjectAppointments(id),
-      fetchProjectDocs(id),
-    ]);
+    await fetchProjectAppointments(id);
+    const fetchedDocs = await fetchProjectDocs(id);
     docs = fetchedDocs;
   } catch (e) { /* fetchProjectDocs returns [] on error; this is a safety net */ }
 
@@ -1953,12 +1971,9 @@ function shouldPauseDetailRefresh() {
 
   if (isDetailScreenFormFocused()) return true;
 
-  // Present scheduling (register): whole status block is a form
-  if (currentProject?.status === "register") return true;
-
-  // Expanded optional appointment panels
-  for (const id of ["demo-panel", "survey-panel"]) {
-    const panel = document.getElementById(id);
+  // Expanded appointment add panels
+  for (const { type } of APPT_DISPLAY_ORDER) {
+    const panel = document.getElementById(`appt-add-${type}`);
     if (panel && panel.style.display !== "none") return true;
   }
 
@@ -2189,43 +2204,99 @@ async function saveProjectInfo() {
 }
 
 const APPT_DISPLAY_ORDER = [
-  { type: "present", label: "วันพรีเซ็น" },
-  { type: "demo", label: "วัน Demo" },
-  { type: "site_survey", label: "วัน Site Survey" },
+  { type: "present", label: "พรีเซ็น (Present)", icon: "🎯" },
+  { type: "demo", label: "Demo", icon: "🖥" },
+  { type: "site_survey", label: "Site Survey", icon: "📍" },
 ];
 
-function appointmentByType(projectID, type) {
-  return (projectAppointments[projectID] || []).find(a => a.type === type);
+function appointmentsOfType(projectID, type) {
+  return (projectAppointments[projectID] || []).filter(a => a.type === type);
+}
+
+function apptCount(projectID, type) {
+  return appointmentsOfType(projectID, type).length;
 }
 
 function buildAppointmentsSection(p) {
-  const rows = APPT_DISPLAY_ORDER.map(({ type, label }) => {
-    const a = appointmentByType(p.id, type);
-    let when = "ยังไม่นัด";
-    let extra = "";
-    let note = "";
-    if (a?.scheduled_at) {
-      when = fmtDateTimeLocal(a.scheduled_at);
-      if (type === "present" && a.present_type) {
-        extra = ` · ${a.present_type === "online" ? "Online" : "Onsite"}`;
-      }
-      if (a.note) note = `<div style="font-size:12px;color:#8e8e93;margin-top:4px">${esc(a.note)}</div>`;
-    }
-    const whenColor = a?.scheduled_at ? "#1c1c1e" : "#8e8e93";
-    return `<div style="padding:10px 0;border-bottom:1px solid #f2f2f7">
-      <div style="font-size:13px;color:#636366;font-weight:600">${esc(label)}</div>
-      <div style="font-size:14px;color:${whenColor};margin-top:4px">${a?.scheduled_at ? "📅 " : ""}${esc(when)}${extra}</div>
-      ${note}
+  const isClosed = p.status === "closed" || p.status === "reject";
+  const iid = esc(p.id);
+  const blocks = APPT_DISPLAY_ORDER.map(({ type, label, icon }) => {
+    const list = appointmentsOfType(p.id, type);
+    const cnt = list.length;
+    const items = list.length
+      ? list.map((a, idx) => {
+          let extra = "";
+          if (type === "present" && a.present_type) {
+            extra = ` · ${a.present_type === "online" ? "Online" : "Onsite"}`;
+          }
+          const delBtn = (!isClosed && a.id)
+            ? `<button type="button" onclick="deleteProjectAppointment('${iid}','${esc(a.id)}')"
+                style="border:none;background:#FFEBEE;color:#C62828;font-size:12px;padding:4px 10px;border-radius:6px;cursor:pointer;font-family:inherit">ลบ</button>`
+            : "";
+          return `<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;padding:10px 0;border-bottom:1px solid #f2f2f7">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:12px;color:#8e8e93">ครั้งที่ ${idx + 1}</div>
+              <div style="font-size:14px;color:#1c1c1e;margin-top:2px">📅 ${esc(fmtDateTimeLocal(a.scheduled_at))}${extra}</div>
+              ${a.note ? `<div style="font-size:12px;color:#636366;margin-top:4px;white-space:pre-wrap">${esc(a.note)}</div>` : ""}
+            </div>
+            ${delBtn}
+          </div>`;
+        }).join("")
+      : `<div style="font-size:13px;color:#8e8e93;padding:8px 0">ยังไม่มีนัดหมาย</div>`;
+
+    const canAdd = !isClosed && cnt < MAX_APPTS_PER_TYPE;
+    const addBlock = canAdd ? `
+      <button type="button" onclick="toggleActionPanel('appt-add-${type}','appt-arrow-${type}')"
+        style="width:100%;margin-top:8px;padding:10px 12px;border:1.5px dashed #7B3FF2;border-radius:10px;background:#F8F5FF;color:#7B3FF2;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">
+        <span id="appt-arrow-${type}">›</span> + เพิ่ม${esc(label)} (${cnt}/${MAX_APPTS_PER_TYPE})
+      </button>
+      <div id="appt-add-${type}" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid #f2f2f7">
+        ${buildApptAddForm(type, iid)}
+      </div>` : (cnt >= MAX_APPTS_PER_TYPE && !isClosed
+      ? `<p style="font-size:12px;color:#8e8e93;margin:8px 0 0">ครบ ${MAX_APPTS_PER_TYPE} ครั้งแล้ว</p>` : "");
+
+    return `<div style="margin-bottom:16px">
+      <div style="font-size:14px;font-weight:700;color:#1c1c1e">${icon} ${esc(label)}</div>
+      ${items}
+      ${addBlock}
     </div>`;
   }).join("");
+
   return `<div class="dcard" style="margin-bottom:12px;padding:16px">
     <div style="font-weight:700;font-size:14px;margin-bottom:4px">📅 กำหนดการนัดหมาย</div>
-    <div style="font-size:12px;color:#8e8e93;margin-bottom:10px;line-height:1.4">
-      พรีเซ็นครั้งแรกเมื่อลงทะเบียน · Demo/Site Survey นัดเพิ่มเมื่อไหร่ก็ได้หลังพรีเซ็น
-      (หลังเสนอราคา / TOR / สัญญา — โปรเจกต customize มักนัด Demo หลังออกสัญญา) ไม่เปลี่ยนสถานะงาน
+    <div style="font-size:12px;color:#8e8e93;margin-bottom:12px;line-height:1.45">
+      เพิ่มได้สูงสุด ${MAX_APPTS_PER_TYPE} ครั้งต่อประเภท (หลายฝ่าย/หลายรอบ) · ไม่เปลี่ยนสถานะ Pipeline
+      · เพิ่มได้จนกว่าโครงการจะปิดงาน
     </div>
-    ${rows}
+    ${blocks}
   </div>`;
+}
+
+function buildApptAddForm(type, projectId) {
+  const presentExtra = type === "present" ? `
+    <div style="margin-bottom:10px">
+      <div class="ap-lbl">รูปแบบ *</div>
+      <select id="ap-${type}-type"
+        style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;margin-top:6px;outline:none;appearance:none;background:white;box-sizing:border-box">
+        <option value="">-- เลือกรูปแบบ --</option>
+        <option value="online">🖥 Online</option>
+        <option value="onsite">🏢 Onsite</option>
+      </select>
+    </div>` : "";
+  return `
+    <div style="margin-bottom:10px">
+      <div class="ap-lbl">วันและเวลา *</div>
+      <input type="datetime-local" id="ap-${type}-date"
+        style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;margin-top:6px;outline:none;box-sizing:border-box">
+    </div>
+    ${presentExtra}
+    <div style="margin-bottom:12px">
+      <div class="ap-lbl">หมายเหตุ / ฝ่าย / รายละเอียด</div>
+      <textarea id="ap-${type}-note" placeholder="เช่น ฝ่ายจัดซื้อ, ผู้ประสานงาน..."
+        style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:14px;font-family:inherit;margin-top:6px;outline:none;resize:none;height:64px;box-sizing:border-box"></textarea>
+    </div>
+    <button type="button" class="btn btn-green" style="font-size:14px"
+      onclick="submitAppt('${projectId}','${type}', this)">บันทึกนัดหมาย</button>`;
 }
 
 function fmtDateTimeLocal(iso) {
@@ -2389,8 +2460,8 @@ async function fetchProjectAppointments(projectID) {
   }
 }
 
-function hasAppointment(projectID, type) {
-  return (projectAppointments[projectID] || []).some(a => a.type === type);
+function canAddAppointment(projectID, type) {
+  return apptCount(projectID, type) < MAX_APPTS_PER_TYPE;
 }
 
 function detailBodyHtml() {
@@ -2399,7 +2470,7 @@ function detailBodyHtml() {
      <div class="sec" style="margin-bottom:7px;margin-top:14px">เอกสารประกอบ</div>
      <div style="font-size:12px;color:#8e8e93;margin:-4px 0 8px">แนบได้สูงสุด ${ATTACHMENT_LIMIT} ไฟล์ — ไม่เปลี่ยนสถานะงาน</div>
      <div id="attachmentsSection"><div class="spin-wrap"><div class="spinner"></div></div></div>
-     <div class="sec" style="margin-bottom:7px;margin-top:14px">เปลี่ยนสถานะ</div>
+     <div class="sec" style="margin-bottom:7px;margin-top:14px">ดำเนินงาน / เอกสาร</div>
      <div id="statusSection"><div class="spin-wrap"><div class="spinner"></div></div></div>`;
 }
 
@@ -2515,33 +2586,7 @@ function renderStatusSection(p, docs) {
   let html = "";
   const iid = esc(p.id);
 
-  if (p.status === "register") {
-    // ── Present scheduling panel ──────────────────────────────────────
-    html = `<div class="dcard" style="padding:16px;margin-bottom:12px">
-      <div style="font-weight:700;font-size:15px;color:#007AFF;margin-bottom:14px">📅 นัดหมาย Present</div>
-      <div style="margin-bottom:10px">
-        <div class="ap-lbl">วันและเวลานัดหมาย *</div>
-        <input type="datetime-local" id="ap-present-date"
-          style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;margin-top:6px;outline:none;box-sizing:border-box">
-      </div>
-      <div style="margin-bottom:10px">
-        <div class="ap-lbl">รูปแบบ *</div>
-        <select id="ap-present-type"
-          style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;margin-top:6px;outline:none;appearance:none;background:white;box-sizing:border-box">
-          <option value="">-- เลือกรูปแบบ --</option>
-          <option value="online">🖥 Online</option>
-          <option value="onsite">🏢 Onsite</option>
-        </select>
-      </div>
-      <div style="margin-bottom:14px">
-        <div class="ap-lbl">บันทึก/หมายเหตุ</div>
-        <textarea id="ap-present-note" placeholder="หมายเหตุ..."
-          style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:14px;font-family:inherit;margin-top:6px;outline:none;resize:none;height:70px;box-sizing:border-box"></textarea>
-      </div>
-      <button class="btn btn-green" onclick="submitPresent('${iid}', this)">ยืนยันนัดหมาย Present</button>
-    </div>`;
-
-  } else {
+  {
     // ── Primary document upload panel ────────────────────────────────
     const s = p.status;
     const role = currentUser?.role || "dealer";
@@ -2549,7 +2594,7 @@ function renderStatusSection(p, docs) {
     const has = t => docs.some(d => d.doc_type === t);
     let primaryHtml = "";
 
-    if (s === "present") {
+    if (s === "register" || s === "present") {
       if (staff && !has("quotation_support")) {
         primaryHtml = `<div class="dcard" style="padding:16px;margin-bottom:12px">
           <div style="font-weight:700;font-size:15px;margin-bottom:6px">📋 แนบใบเสนอราคา (Support)</div>
@@ -2610,57 +2655,6 @@ function renderStatusSection(p, docs) {
       </div>`;
     }
     html += primaryHtml;
-
-    if (!hasAppointment(p.id, "demo")) {
-      html += `<div class="dcard" style="margin-bottom:12px;overflow:hidden">
-        <button onclick="toggleActionPanel('demo-panel','demo-arrow')"
-          style="width:100%;padding:14px 16px;background:none;border:none;text-align:left;font-size:14px;font-weight:600;cursor:pointer;color:#007AFF;font-family:inherit;display:flex;align-items:center;gap:8px">
-          <span id="demo-arrow">›</span> + นัดวัน Demo (ไม่บังคับ)
-        </button>
-        <div style="padding:0 16px 8px;font-size:12px;color:#8e8e93">นัดได้ทุกขั้นหลังพรีเซ็น (รวมหลังเซ็นสัญญา — customize app) ไม่เปลี่ยนสถานะงาน</div>
-        <div id="demo-panel" style="display:none;padding:0 16px 16px">
-          <div style="margin-bottom:10px">
-            <div class="ap-lbl">วันและเวลา *</div>
-            <input type="datetime-local" id="ap-demo-date"
-              style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;margin-top:6px;outline:none;box-sizing:border-box">
-          </div>
-          <div style="margin-bottom:12px">
-            <div class="ap-lbl">หมายเหตุ</div>
-            <textarea id="ap-demo-note" placeholder="หมายเหตุ..."
-              style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:14px;font-family:inherit;margin-top:6px;outline:none;resize:none;height:60px;box-sizing:border-box"></textarea>
-          </div>
-          <button class="btn btn-green" style="font-size:14px" onclick="submitDemo('${iid}', this)">บันทึกนัด Demo</button>
-        </div>
-      </div>`;
-    }
-
-    if (!hasAppointment(p.id, "site_survey")) {
-      html += `<div class="dcard" style="margin-bottom:12px;overflow:hidden">
-        <button onclick="toggleActionPanel('survey-panel','survey-arrow')"
-          style="width:100%;padding:14px 16px;background:none;border:none;text-align:left;font-size:14px;font-weight:600;cursor:pointer;color:#007AFF;font-family:inherit;display:flex;align-items:center;gap:8px">
-          <span id="survey-arrow">›</span> + นัดวัน Site Survey (ไม่บังคับ)
-        </button>
-        <div style="padding:0 16px 8px;font-size:12px;color:#8e8e93">นัดได้ทุกขั้นหลังพรีเซ็น (รวมหลังสัญญา) ไม่เปลี่ยนสถานะงาน</div>
-        <div id="survey-panel" style="display:none;padding:0 16px 16px">
-          <div style="margin-bottom:10px">
-            <div class="ap-lbl">วันและเวลา *</div>
-            <input type="datetime-local" id="ap-survey-date"
-              style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;margin-top:6px;outline:none;box-sizing:border-box">
-          </div>
-          <div style="margin-bottom:10px">
-            <div class="ap-lbl">หมายเหตุ</div>
-            <textarea id="ap-survey-note" placeholder="หมายเหตุ..."
-              style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:14px;font-family:inherit;margin-top:6px;outline:none;resize:none;height:60px;box-sizing:border-box"></textarea>
-          </div>
-          <div style="margin-bottom:12px">
-            <div class="ap-lbl">แนบไฟล์ (ไม่บังคับ)</div>
-            <button class="btn" style="margin-top:6px;background:#f2f2f7;color:#636366;font-size:13px"
-              onclick="openDocUpload('${iid}','site_survey')">📎 อัปโหลดไฟล์ Site Survey</button>
-          </div>
-          <button class="btn btn-green" style="font-size:14px" onclick="submitSurvey('${iid}', this)">บันทึกนัด Site Survey</button>
-        </div>
-      </div>`;
-    }
   }
 
   // ── Reject button (all statuses except closed/reject) ────────────
@@ -2845,20 +2839,48 @@ function setBtnLoading(btn, loading, idleText) {
   }
 }
 
-async function submitPresent(projectId, btn) {
-  const date = document.getElementById("ap-present-date")?.value;
-  const type = document.getElementById("ap-present-type")?.value;
-  const note = document.getElementById("ap-present-note")?.value.trim() || "";
-  if (!date) { toast("กรุณาเลือกวันและเวลานัดหมาย"); return; }
-  if (!type) { toast("กรุณาเลือกรูปแบบ (Online/Onsite)"); return; }
-  await doChangeStatus(projectId, "present", note, "", new Date(date).toISOString(), "", type, btn);
+async function submitAppt(projectId, apptType, btn) {
+  const date = document.getElementById(`ap-${apptType}-date`)?.value;
+  const note = document.getElementById(`ap-${apptType}-note`)?.value.trim() || "";
+  const presentType = apptType === "present"
+    ? (document.getElementById(`ap-${apptType}-type`)?.value || "")
+    : "";
+  if (!date) { toast("กรุณาเลือกวันและเวลา"); return; }
+  if (apptType === "present" && !presentType) { toast("กรุณาเลือกรูปแบบ Online/Onsite"); return; }
+  const ok = await saveProjectAppointment(projectId, apptType, date, note, presentType, btn);
+  if (ok) {
+    document.getElementById(`ap-${apptType}-date`).value = "";
+    if (document.getElementById(`ap-${apptType}-note`)) document.getElementById(`ap-${apptType}-note`).value = "";
+    if (document.getElementById(`ap-${apptType}-type`)) document.getElementById(`ap-${apptType}-type`).value = "";
+    toggleActionPanel(`appt-add-${apptType}`, `appt-arrow-${apptType}`);
+  }
+}
+
+async function deleteProjectAppointment(projectId, apptId) {
+  if (!apptId || !confirm("ลบนัดหมายนี้?")) return;
+  try {
+    const res = await fetchWithTimeout(`${API_BASE}/projects/${projectId}/appointments/${apptId}`, {
+      method: "DELETE",
+      headers: { Authorization: "Bearer " + token },
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      toast(data.error || "ลบไม่สำเร็จ");
+      return;
+    }
+    toast("ลบนัดหมายแล้ว ✓");
+    await fetchProjectAppointments(projectId);
+    if (detailProjectID === projectId) await refreshDetail(projectId);
+  } catch (e) {
+    toast("ไม่สามารถเชื่อมต่อได้");
+  }
 }
 
 async function saveProjectAppointment(projectId, apptType, date, note, presentType, btn) {
   setBtnLoading(btn, true);
   try {
     const res = await fetchWithTimeout(`${API_BASE}/projects/${projectId}/appointments/${apptType}`, {
-      method: "PUT",
+      method: "POST",
       headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
       body: JSON.stringify({
         scheduled_at: new Date(date).toISOString(),
@@ -2892,19 +2914,6 @@ function showCalendarToast(data) {
   }
 }
 
-async function submitDemo(projectId, btn) {
-  const date = document.getElementById("ap-demo-date")?.value;
-  const note = document.getElementById("ap-demo-note")?.value.trim() || "";
-  if (!date) { toast("กรุณาเลือกวันและเวลา"); return; }
-  await saveProjectAppointment(projectId, "demo", date, note, "", btn);
-}
-
-async function submitSurvey(projectId, btn) {
-  const date = document.getElementById("ap-survey-date")?.value;
-  const note = document.getElementById("ap-survey-note")?.value.trim() || "";
-  if (!date) { toast("กรุณาเลือกวันและเวลา"); return; }
-  await saveProjectAppointment(projectId, "site_survey", date, note, "", btn);
-}
 
 function openRejectPanel(projectId) {
   _pendingProjectID = projectId;
@@ -3184,16 +3193,17 @@ async function profileSendOTP() {
       errEl.textContent = data.error || "ส่งรหัสไม่สำเร็จ";
       errEl.style.display = "block";
     } else {
-      verifyCooldownUntil = Date.now() + 60000;
+      verifyCooldownUntil = Date.now() + OTP_COOLDOWN_SEC * 1000;
       profileEmailVerifiedForInput = false;
-      hintEl.textContent = "ส่ง OTP แล้ว กรุณาตรวจอีเมลและกดยืนยัน";
+      hintEl.textContent = "ส่ง OTP แล้ว กรุณาตรวจอีเมลและกดยืนยัน (รอ " + OTP_COOLDOWN_SEC + " วินาทีก่อนส่งซ้ำ)";
       if (data.debug_otp) hintEl.textContent += ` (DEV: ${data.debug_otp})`;
       toast("ส่ง OTP สำเร็จ ✓");
+      startOtpCountdown("profileSendOtpBtn");
+      return;
     }
   } catch (e) {
     errEl.textContent = "ไม่สามารถเชื่อมต่อได้";
     errEl.style.display = "block";
-  } finally {
     btn.disabled = false;
     btn.textContent = "ส่งรหัส OTP";
   }
