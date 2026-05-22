@@ -229,7 +229,7 @@
   <p class="splash-sub">ระบบจัดการลูกค้า<br>หน่วยงานราชการ</p>
   <div class="splash-spinner" id="splashSpinner"></div>
   <p id="splashStatus" style="font-size:13px;color:#8e8e93;margin-top:12px">กำลังโหลด...</p>
-  <p id="splashVersion" style="font-size:11px;color:#94a3b8;margin-top:6px">v20260522h</p>
+  <p id="splashVersion" style="font-size:11px;color:#94a3b8;margin-top:6px">v20260522i</p>
   <p id="splashErr" class="splash-err" style="display:none"></p>
   <button id="splashRetry" type="button" style="display:none;margin-top:14px;background:linear-gradient(135deg,#7B3FF2,#00A8E8);color:white;border:none;padding:12px 28px;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit"
     onclick="localStorage.removeItem('vizzel_token');try{liff.logout();}catch(e){}window.location.reload();">ลองใหม่</button>
@@ -617,6 +617,22 @@
   </div>
 </div>
 
+<!-- ── Delete member modal (LINE WebView มักบล็อก confirm()) ── -->
+<div id="deleteMemberModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1001;align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:16px;padding:24px;width:90%;max-width:400px">
+    <h2 style="margin:0 0 12px;font-size:18px;font-weight:700;color:#C62828">ลบพนักงาน</h2>
+    <p id="deleteMemberMsg" style="margin:0 0 8px;font-size:14px;line-height:1.5;color:#1c1c1e"></p>
+    <p id="deleteMemberMsg2" style="display:none;margin:0 0 16px;font-size:13px;line-height:1.45;color:#636366"></p>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button type="button" id="deleteMemberCancelBtn"
+        style="border:1px solid #e5e5ea;background:white;border-radius:10px;padding:10px 16px;font-size:14px;cursor:pointer;font-family:inherit">ยกเลิก</button>
+      <button type="button" id="deleteMemberNextBtn"
+        style="border:none;background:#FF3B30;color:white;border-radius:10px;padding:10px 16px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">ถัดไป</button>
+      <button type="button" id="deleteMemberConfirmBtn" style="display:none;border:none;background:#C62828;color:white;border-radius:10px;padding:10px 16px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">ยืนยันลบ</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── Create project modal ── -->
 <div id="createModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;">
   <div style="background:white;border-radius:16px;padding:24px;width:90%;max-width:480px;max-height:90vh;overflow-y:auto;">
@@ -683,7 +699,7 @@
 const FRONTEND_BASE_URL = "https://vizzelintel.github.io/vizzel-sales-frontend/";
 const LIFF_ID           = "2010133685-tke1EWht";
 const LIFF_OPEN_URL     = "https://liff.line.me/" + LIFF_ID;
-const APP_BOOT_VERSION  = "20260522h";
+const APP_BOOT_VERSION  = "20260522i";
 const API               = "https://vizzel-sales-api.fly.dev";
 const API_BASE          = API + "/api/v1";
 
@@ -1714,7 +1730,9 @@ function renderDetailMembers(members) {
                <option value="admin"   ${m.role==="admin"  ?"selected":""}>Admin</option>
              </select>
              ${m.id !== currentUser?.id
-               ? `<button type="button" onclick="deleteMember('${esc(m.id)}', ${JSON.stringify((m.first_name + " " + m.last_name).trim() || m.full_name || "")})"
+               ? `<button type="button" class="btn-delete-member" data-member-id="${esc(m.id)}"
+                    data-member-name="${esc((m.first_name + " " + m.last_name).trim() || m.full_name || "")}"
+                    data-member-company-id="${esc(currentCompanyDetail?.id || "")}"
                     style="border:1px solid #FFCDD2;background:#FFEBEE;color:#C62828;font-size:12px;padding:6px 10px;border-radius:8px;cursor:pointer;font-family:inherit">ลบ</button>`
                : ""}
            </div>`
@@ -2008,7 +2026,7 @@ function shouldPauseDetailRefresh() {
 }
 
 function isBlockingOverlayOrModalOpen() {
-  for (const id of ["createModal", "createCompanyModal"]) {
+  for (const id of ["createModal", "createCompanyModal", "deleteMemberModal"]) {
     const el = document.getElementById(id);
     if (el && el.style.display === "flex") return true;
   }
@@ -3208,6 +3226,25 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("profileDropdown").style.display = "none";
   });
   document.getElementById("profileDropdown").addEventListener("click", e => e.stopPropagation());
+
+  document.getElementById("deleteMemberCancelBtn")?.addEventListener("click", closeDeleteMemberModal);
+  document.getElementById("deleteMemberNextBtn")?.addEventListener("click", deleteMemberStep1);
+  document.getElementById("deleteMemberConfirmBtn")?.addEventListener("click", executeDeleteMember);
+  document.getElementById("deleteMemberModal")?.addEventListener("click", e => {
+    if (e.target.id === "deleteMemberModal") closeDeleteMemberModal();
+  });
+
+  document.body.addEventListener("click", e => {
+    const btn = e.target.closest(".btn-delete-member");
+    if (!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    openDeleteMemberModal(
+      btn.dataset.memberId,
+      btn.dataset.memberName,
+      btn.dataset.memberCompanyId || "",
+    );
+  });
 });
 
 function applyRoleMenuVisibility(role) {
@@ -3469,7 +3506,9 @@ function renderMembers(members) {
                  <option value="admin"   ${m.role==="admin"  ?"selected":""}>Admin</option>
                </select>
                ${m.id !== currentUser?.id
-                 ? `<button type="button" onclick="deleteMember('${esc(m.id)}', ${JSON.stringify((m.first_name + " " + m.last_name).trim() || m.full_name || "")})"
+                 ? `<button type="button" class="btn-delete-member" data-member-id="${esc(m.id)}"
+                      data-member-name="${esc((m.first_name + " " + m.last_name).trim() || m.full_name || "")}"
+                      data-member-company-id=""
                       style="border:1px solid #FFCDD2;background:#FFEBEE;color:#C62828;font-size:12px;padding:6px 12px;border-radius:8px;cursor:pointer;font-family:inherit;width:100%">ลบพนักงาน</button>`
                  : ""}
              </div>`
@@ -3490,25 +3529,65 @@ async function changeMemberRole(userId, newRole) {
   } catch (e) { toast("เปลี่ยน role ไม่สำเร็จ"); }
 }
 
-async function deleteMember(userId, displayName) {
-  const name = (displayName || "").trim() || "พนักงานคนนี้";
-  if (!confirm(`ลบพนักงาน "${name}" ออกจากบริษัทใช่หรือไม่?`)) return;
-  if (!confirm("ยืนยันอีกครั้ง: การลบไม่สามารถยกเลิกได้")) return;
+let pendingDeleteMember = null;
+
+function openDeleteMemberModal(userId, displayName, companyId) {
+  pendingDeleteMember = {
+    userId,
+    displayName: (displayName || "").trim() || "พนักงานคนนี้",
+    companyId: (companyId || "").trim(),
+  };
+  const modal = document.getElementById("deleteMemberModal");
+  document.getElementById("deleteMemberMsg").textContent =
+    `ต้องการลบ "${pendingDeleteMember.displayName}" ออกจากระบบใช่หรือไม่?`;
+  document.getElementById("deleteMemberMsg2").style.display = "none";
+  document.getElementById("deleteMemberMsg2").textContent =
+    "ยืนยันอีกครั้ง: การลบไม่สามารถยกเลิกได้";
+  document.getElementById("deleteMemberNextBtn").style.display = "";
+  document.getElementById("deleteMemberConfirmBtn").style.display = "none";
+  modal.style.display = "flex";
+}
+
+function closeDeleteMemberModal() {
+  document.getElementById("deleteMemberModal").style.display = "none";
+  pendingDeleteMember = null;
+}
+
+function deleteMemberStep1() {
+  document.getElementById("deleteMemberMsg2").style.display = "block";
+  document.getElementById("deleteMemberNextBtn").style.display = "none";
+  document.getElementById("deleteMemberConfirmBtn").style.display = "";
+}
+
+async function executeDeleteMember() {
+  if (!pendingDeleteMember?.userId) {
+    closeDeleteMemberModal();
+    return;
+  }
+  const { userId, companyId } = pendingDeleteMember;
+  const btn = document.getElementById("deleteMemberConfirmBtn");
+  setBtnLoading(btn, true, "ยืนยันลบ");
+  const url = companyId
+    ? `${API_BASE}/admin/companies/${companyId}/members/${userId}`
+    : `${API_BASE}/company/members/${userId}`;
   try {
-    const res = await fetchWithTimeout(`${API_BASE}/company/members/${userId}`, {
+    const res = await fetchWithTimeout(url, {
       method: "DELETE",
       headers: { Authorization: "Bearer " + token },
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       toast(data.error || "ลบพนักงานไม่สำเร็จ");
+      setBtnLoading(btn, false, "ยืนยันลบ");
       return;
     }
+    closeDeleteMemberModal();
     toast("ลบพนักงานแล้ว ✓");
     loadMembers();
-    if (currentCompanyDetail?.id) loadCompanyDetail(currentCompanyDetail.id);
+    if (currentCompanyDetail?.id) openCompanyDetail(currentCompanyDetail.id);
   } catch (e) {
     toast("ไม่สามารถเชื่อมต่อได้");
+    setBtnLoading(btn, false, "ยืนยันลบ");
   }
 }
 
