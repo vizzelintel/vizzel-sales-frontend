@@ -215,7 +215,7 @@
   <p class="splash-sub">ระบบจัดการลูกค้า<br>หน่วยงานราชการ</p>
   <div class="splash-spinner" id="splashSpinner"></div>
   <p id="splashStatus" style="font-size:13px;color:#8e8e93;margin-top:12px">กำลังโหลด...</p>
-  <p id="splashVersion" style="font-size:11px;color:#94a3b8;margin-top:6px">v20260522b</p>
+  <p id="splashVersion" style="font-size:11px;color:#94a3b8;margin-top:6px">v20260522c</p>
   <p id="splashErr" class="splash-err" style="display:none"></p>
   <button id="splashRetry" type="button" style="display:none;margin-top:14px;background:linear-gradient(135deg,#7B3FF2,#00A8E8);color:white;border:none;padding:12px 28px;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit"
     onclick="localStorage.removeItem('vizzel_token');try{liff.logout();}catch(e){}window.location.reload();">ลองใหม่</button>
@@ -802,7 +802,6 @@ function clearOAuthParamsFromUrl() {
 /* ─── Status metadata ─── */
 const STATUS = {
   register:    { label: "Register",        short: "Register",   group: "gray"   },
-  present:     { label: "พรีเซ็น",         short: "Present",    group: "blue"   },
   quotation:   { label: "ส่งใบเสนอราคา",  short: "Quotation",  group: "orange" },
   tor:         { label: "ส่งร่าง TOR",     short: "TOR",        group: "orange" },
   contract:    { label: "สัญญาแล้ว",       short: "Contract",   group: "green"  },
@@ -810,6 +809,19 @@ const STATUS = {
   reject:      { label: "Reject",          short: "Reject",     group: "red"    },
 };
 const STATUS_KEYS = Object.keys(STATUS);
+
+function normalizeStatusCounts(counts) {
+  const c = { ...counts };
+  if (c.present) {
+    c.register = (c.register || 0) + c.present;
+    delete c.present;
+  }
+  return c;
+}
+
+function pipelineStatusKey(status) {
+  return status === "present" ? "register" : status;
+}
 
 /* Doc type display names (new scheme – auto-advance via upload) */
 const DOC_NAMES = {
@@ -1350,7 +1362,7 @@ async function loadPipeline(page) {
     pipelineRecentTotal = data.total ?? pipelineRecent.length;
     pipelineRecentPage = data.page ?? pipelineRecentPage;
     pipelineRecentTotalPages = data.total_pages ?? 1;
-    pipelineCounts = data.status_counts || {};
+    pipelineCounts = normalizeStatusCounts(data.status_counts || {});
     renderPipeline();
   } catch (e) {
     console.error("loadPipeline", e);
@@ -1880,19 +1892,19 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function directoryRowH(p) {
-  const g = STATUS[p.status]?.group || "gray";
+  const g = STATUS[pipelineStatusKey(p.status)]?.group || "gray";
   return `<div class="prow prow-static">
     <div class="prow-info">
       <div class="prow-name">${esc(p.agency_name || "-")}</div>
     </div>
     <span style="font-size:12px;color:#636366;min-width:72px;text-align:center;white-space:nowrap">${esc(p.region || "-")}</span>
-    <span class="bdg bg-${g}">${STATUS[p.status]?.short || p.status}</span>
+    <span class="bdg bg-${g}">${STATUS[pipelineStatusKey(p.status)]?.short || p.status}</span>
   </div>`;
 }
 
 function rowH(p) {
   const sub = [p.agency_type, p.region].filter(Boolean).join(" · ");
-  const g   = STATUS[p.status]?.group || "gray";
+  const g   = STATUS[pipelineStatusKey(p.status)]?.group || "gray";
   const exemptStatuses = ["contract", "closed", "reject"];
   let countdown = "";
   if (p.auto_reject_at && !exemptStatuses.includes(p.status)) {
@@ -1906,7 +1918,7 @@ function rowH(p) {
       ${sub ? `<div class="prow-sub">${esc(sub)}</div>` : ""}
     </div>
     ${countdown}
-    <span class="bdg bg-${g}">${STATUS[p.status]?.short || p.status}</span>
+    <span class="bdg bg-${g}">${STATUS[pipelineStatusKey(p.status)]?.short || p.status}</span>
     <span class="chev">›</span>
   </div>`;
 }
@@ -2012,7 +2024,7 @@ function startDetailRefresh(projectId) {
         document.getElementById("screen-detail")?.classList.contains("on")) {
       refreshDetail(projectId, { light: true });
     }
-  }, 12000);
+  }, 30000);
 }
 
 function stopDetailRefresh() {
@@ -2043,7 +2055,7 @@ function buildDetailInfo(p) {
     ["ตำแหน่ง",    p.contact_position || "-"],
     ["โทรศัพท์",   p.contact_phone
         ? `<a href="tel:${esc(p.contact_phone)}">${esc(p.contact_phone)}</a>` : "-"],
-    ["สถานะ",      `<span class="bdg bg-${STATUS[p.status]?.group||'gray'}">${STATUS[p.status]?.label||p.status}</span>`],
+    ["สถานะ",      `<span class="bdg bg-${STATUS[pipelineStatusKey(p.status)]?.group||'gray'}">${STATUS[pipelineStatusKey(p.status)]?.label||p.status}</span>`],
     ...(p.present_type  ? [["รูปแบบ Present", p.present_type === "online" ? "🖥 Online" : "🏢 Onsite"]] : []),
     ...(p.reject_reason ? [["เหตุผล Reject",  esc(p.reject_reason)]] : []),
     ...(p.status_note   ? [["หมายเหตุ",       esc(p.status_note)]]   : []),
@@ -2594,7 +2606,7 @@ function renderStatusSection(p, docs) {
     const has = t => docs.some(d => d.doc_type === t);
     let primaryHtml = "";
 
-    if (s === "register" || s === "present") {
+    if (s === "register") {
       if (staff && !has("quotation_support")) {
         primaryHtml = `<div class="dcard" style="padding:16px;margin-bottom:12px">
           <div style="font-weight:700;font-size:15px;margin-bottom:6px">📋 แนบใบเสนอราคา (Support)</div>
@@ -2870,7 +2882,19 @@ async function deleteProjectAppointment(projectId, apptId) {
     }
     toast("ลบนัดหมายแล้ว ✓");
     await fetchProjectAppointments(projectId);
-    if (detailProjectID === projectId) await refreshDetail(projectId);
+    if (detailProjectID === projectId) {
+      const p = currentProject || findLocalProject(projectId);
+      if (p) {
+        const hdr = document.getElementById("detailContent");
+        if (hdr) {
+          const docs = currentDocs || [];
+          hdr.innerHTML = buildDetailHeader(p) + detailBodyHtml();
+          try { renderDocsSection(docs, projectId); } catch (e) {}
+          try { renderAttachmentsSection(docs, projectId); } catch (e) {}
+          try { renderStatusSection(p, docs); } catch (e) {}
+        }
+      }
+    }
   } catch (e) {
     toast("ไม่สามารถเชื่อมต่อได้");
   }
