@@ -229,7 +229,7 @@
   <p class="splash-sub">ระบบจัดการลูกค้า<br>หน่วยงานราชการ</p>
   <div class="splash-spinner" id="splashSpinner"></div>
   <p id="splashStatus" style="font-size:13px;color:#8e8e93;margin-top:12px">กำลังโหลด...</p>
-  <p id="splashVersion" style="font-size:11px;color:#94a3b8;margin-top:6px">v20260522i</p>
+  <p id="splashVersion" style="font-size:11px;color:#94a3b8;margin-top:6px">v20260522j</p>
   <p id="splashErr" class="splash-err" style="display:none"></p>
   <button id="splashRetry" type="button" style="display:none;margin-top:14px;background:linear-gradient(135deg,#7B3FF2,#00A8E8);color:white;border:none;padding:12px 28px;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit"
     onclick="localStorage.removeItem('vizzel_token');try{liff.logout();}catch(e){}window.location.reload();">ลองใหม่</button>
@@ -572,7 +572,11 @@
         <input id="detailCompanyTaxId" type="text" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #e5e5ea;font-size:15px;font-family:inherit;margin-top:6px;outline:none;box-sizing:border-box">
       </div>
       <div id="detailSaveError" style="color:#FF3B30;font-size:13px;margin-bottom:10px;display:none"></div>
-      <button onclick="saveCompanyDetail()" class="btn btn-green">บันทึก</button>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+        <button onclick="saveCompanyDetail()" class="btn btn-green">บันทึก</button>
+        <button type="button" id="btnDeleteCompany" style="display:none;border:1px solid #FFCDD2;background:#FFEBEE;color:#C62828;padding:10px 16px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">ลบบริษัท</button>
+      </div>
+      <p id="deleteCompanyHint" style="display:none;font-size:12px;color:#8e8e93;margin:10px 0 0">ไม่สามารถลบบริษัทที่ตัวเองสังกัดอยู่ได้</p>
     </div>
     <div id="detailInviteSection" style="display:none;background:white;border-radius:12px;padding:20px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.07)">
       <div style="font-weight:700;margin-bottom:8px">🔑 Invite Code</div>
@@ -614,6 +618,22 @@
       style="width:100%;background:#7B3FF2;color:white;border:none;padding:14px;border-radius:12px;font-size:16px;font-weight:600;cursor:pointer;font-family:inherit">
       สร้างบริษัท
     </button>
+  </div>
+</div>
+
+<!-- ── Delete company modal ── -->
+<div id="deleteCompanyModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1001;align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:16px;padding:24px;width:90%;max-width:400px">
+    <h2 style="margin:0 0 12px;font-size:18px;font-weight:700;color:#C62828">ลบบริษัท</h2>
+    <p id="deleteCompanyMsg" style="margin:0 0 8px;font-size:14px;line-height:1.5;color:#1c1c1e"></p>
+    <p id="deleteCompanyMsg2" style="display:none;margin:0 0 16px;font-size:13px;line-height:1.45;color:#636366"></p>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button type="button" id="deleteCompanyCancelBtn"
+        style="border:1px solid #e5e5ea;background:white;border-radius:10px;padding:10px 16px;font-size:14px;cursor:pointer;font-family:inherit">ยกเลิก</button>
+      <button type="button" id="deleteCompanyNextBtn"
+        style="border:none;background:#FF3B30;color:white;border-radius:10px;padding:10px 16px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">ถัดไป</button>
+      <button type="button" id="deleteCompanyConfirmBtn" style="display:none;border:none;background:#C62828;color:white;border-radius:10px;padding:10px 16px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">ยืนยันลบ</button>
+    </div>
   </div>
 </div>
 
@@ -699,7 +719,7 @@
 const FRONTEND_BASE_URL = "https://vizzelintel.github.io/vizzel-sales-frontend/";
 const LIFF_ID           = "2010133685-tke1EWht";
 const LIFF_OPEN_URL     = "https://liff.line.me/" + LIFF_ID;
-const APP_BOOT_VERSION  = "20260522i";
+const APP_BOOT_VERSION  = "20260522j";
 const API               = "https://vizzel-sales-api.fly.dev";
 const API_BASE          = API + "/api/v1";
 
@@ -1664,6 +1684,7 @@ async function openCompanyDetail(companyId) {
     }
 
     renderDetailMembers(currentCompanyDetail.members || []);
+    updateDeleteCompanyButton();
     showProfileScreen("company-detail");
   } catch(e) {
     toast("ไม่สามารถโหลดข้อมูลได้");
@@ -2026,7 +2047,7 @@ function shouldPauseDetailRefresh() {
 }
 
 function isBlockingOverlayOrModalOpen() {
-  for (const id of ["createModal", "createCompanyModal", "deleteMemberModal"]) {
+  for (const id of ["createModal", "createCompanyModal", "deleteMemberModal", "deleteCompanyModal"]) {
     const el = document.getElementById(id);
     if (el && el.style.display === "flex") return true;
   }
@@ -3234,6 +3255,17 @@ document.addEventListener("DOMContentLoaded", () => {
     if (e.target.id === "deleteMemberModal") closeDeleteMemberModal();
   });
 
+  document.getElementById("deleteCompanyCancelBtn")?.addEventListener("click", closeDeleteCompanyModal);
+  document.getElementById("deleteCompanyNextBtn")?.addEventListener("click", deleteCompanyStep1);
+  document.getElementById("deleteCompanyConfirmBtn")?.addEventListener("click", executeDeleteCompany);
+  document.getElementById("deleteCompanyModal")?.addEventListener("click", e => {
+    if (e.target.id === "deleteCompanyModal") closeDeleteCompanyModal();
+  });
+  document.getElementById("btnDeleteCompany")?.addEventListener("click", () => {
+    if (!currentCompanyDetail?.id) return;
+    openDeleteCompanyModal(currentCompanyDetail.id, currentCompanyDetail.name || "");
+  });
+
   document.body.addEventListener("click", e => {
     const btn = e.target.closest(".btn-delete-member");
     if (!btn) return;
@@ -3530,6 +3562,85 @@ async function changeMemberRole(userId, newRole) {
 }
 
 let pendingDeleteMember = null;
+let pendingDeleteCompany = null;
+
+function updateDeleteCompanyButton() {
+  const btn = document.getElementById("btnDeleteCompany");
+  const hint = document.getElementById("deleteCompanyHint");
+  if (!btn) return;
+  const isAdmin = currentUser?.role === "admin";
+  const ownCompany = currentCompanyDetail?.id && currentUser?.company_id &&
+    currentCompanyDetail.id === currentUser.company_id;
+  if (!isAdmin) {
+    btn.style.display = "none";
+    if (hint) hint.style.display = "none";
+    return;
+  }
+  if (ownCompany) {
+    btn.style.display = "none";
+    if (hint) hint.style.display = "block";
+  } else {
+    btn.style.display = "";
+    if (hint) hint.style.display = "none";
+  }
+}
+
+function openDeleteCompanyModal(companyId, companyName) {
+  pendingDeleteCompany = {
+    companyId,
+    companyName: (companyName || "").trim() || "บริษัทนี้",
+  };
+  document.getElementById("deleteCompanyMsg").textContent =
+    `ต้องการลบบริษัท "${pendingDeleteCompany.companyName}" และข้อมูลที่เกี่ยวข้องทั้งหมด (พนักงาน โครงการ เอกสาร) ใช่หรือไม่?`;
+  document.getElementById("deleteCompanyMsg2").style.display = "none";
+  document.getElementById("deleteCompanyMsg2").textContent =
+    "ยืนยันอีกครั้ง: การลบไม่สามารถยกเลิกได้";
+  document.getElementById("deleteCompanyNextBtn").style.display = "";
+  document.getElementById("deleteCompanyConfirmBtn").style.display = "none";
+  document.getElementById("deleteCompanyModal").style.display = "flex";
+}
+
+function closeDeleteCompanyModal() {
+  document.getElementById("deleteCompanyModal").style.display = "none";
+  pendingDeleteCompany = null;
+}
+
+function deleteCompanyStep1() {
+  document.getElementById("deleteCompanyMsg2").style.display = "block";
+  document.getElementById("deleteCompanyNextBtn").style.display = "none";
+  document.getElementById("deleteCompanyConfirmBtn").style.display = "";
+}
+
+async function executeDeleteCompany() {
+  if (!pendingDeleteCompany?.companyId) {
+    closeDeleteCompanyModal();
+    return;
+  }
+  const { companyId } = pendingDeleteCompany;
+  const btn = document.getElementById("deleteCompanyConfirmBtn");
+  setBtnLoading(btn, true, "ยืนยันลบ");
+  try {
+    const res = await fetchWithTimeout(`${API_BASE}/admin/companies/${companyId}`, {
+      method: "DELETE",
+      headers: { Authorization: "Bearer " + token },
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      toast(data.error || "ลบบริษัทไม่สำเร็จ");
+      setBtnLoading(btn, false, "ยืนยันลบ");
+      return;
+    }
+    closeDeleteCompanyModal();
+    currentCompanyDetail = null;
+    toast("ลบบริษัทแล้ว ✓");
+    showProfileScreen("companies");
+    loadCompanies();
+    loadCompanyFilterOptions();
+  } catch (e) {
+    toast("ไม่สามารถเชื่อมต่อได้");
+    setBtnLoading(btn, false, "ยืนยันลบ");
+  }
+}
 
 function openDeleteMemberModal(userId, displayName, companyId) {
   pendingDeleteMember = {
