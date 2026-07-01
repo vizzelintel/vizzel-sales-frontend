@@ -1,0 +1,439 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>คู่มือการเข้าใช้งานระบบ Vizzel Sales ผ่าน LINE</title>
+<style>
+  @font-face{font-family:'TH Sarabun New';src:url('fonts/THSarabunNew.ttf') format('truetype');font-weight:normal;font-style:normal;}
+  @font-face{font-family:'TH Sarabun New';src:url('fonts/THSarabunNew-Bold.ttf') format('truetype');font-weight:bold;font-style:normal;}
+  @font-face{font-family:'TH Sarabun New';src:url('fonts/THSarabunNew-Italic.ttf') format('truetype');font-weight:normal;font-style:italic;}
+  @font-face{font-family:'TH Sarabun New';src:url('fonts/THSarabunNew-BoldItalic.ttf') format('truetype');font-weight:bold;font-style:italic;}
+
+  :root{
+    --pur:#7B3FF2; --blue:#00A8E8; --ink:#1c1c1e; --sub:#6b6b76;
+    --line:#e3e0ea; --rule:#7B3FF2; --soft:#f3f0fb; --darknode:#4b2e83;
+  }
+  *{box-sizing:border-box;}
+  @page{size:A4;margin:0;}
+  html,body{margin:0;padding:0;background:#fff;
+    font-family:'TH Sarabun New',sans-serif;color:var(--ink);
+    font-size:16pt;line-height:1.5;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+
+  .page{width:210mm;height:297mm;padding:13mm 16mm 12mm;position:relative;
+    page-break-after:always;overflow:hidden;display:flex;flex-direction:column;}
+  .page:last-child{page-break-after:auto;}
+
+  /* running header */
+  .phead{display:flex;align-items:flex-end;justify-content:space-between;
+    border-bottom:2.5px solid var(--rule);padding-bottom:5px;margin-bottom:14px;flex:0 0 auto;}
+  .phead .ht1{font-weight:bold;font-size:15pt;line-height:1.15;}
+  .phead .ht2{font-size:13.5pt;color:var(--sub);line-height:1.15;}
+  .phead img{height:40px;}
+  /* running footer */
+  .pfoot{position:absolute;left:16mm;right:16mm;bottom:8mm;display:flex;
+    justify-content:space-between;align-items:center;gap:10px;
+    border-top:1px solid var(--line);padding-top:4px;
+    font-size:9.5pt;color:#9a97a3;flex:0 0 auto;}
+  .pfoot .pg{white-space:nowrap;font-weight:bold;color:#7a7784;}
+  .pbody{flex:1 1 auto;min-height:0;}
+
+  h1.sec{font-size:26pt;font-weight:bold;margin:2px 0 2px;}
+  h2.sub{font-size:18pt;font-weight:bold;color:#33313a;margin:0 0 10px;}
+  .sec-sub{font-size:15pt;color:var(--sub);margin:0 0 12px;}
+  p{margin:0 0 8px;}
+  ul,ol{margin:2px 0 8px;padding-left:26px;}
+  li{margin-bottom:3px;}
+  .muted{color:var(--sub);}
+  .small{font-size:13pt;}
+  b,strong{font-weight:bold;}
+
+  /* step number bullet like reference "1) 2)" */
+  .step{display:flex;gap:9px;align-items:flex-start;margin:10px 0 4px;}
+  .step .n{flex:0 0 auto;font-weight:bold;font-size:16pt;color:var(--pur);min-width:24px;}
+  .step .t{font-size:16pt;}
+  .note{background:var(--soft);border-left:4px solid var(--pur);
+    padding:8px 12px;border-radius:6px;margin:8px 0;font-size:14.5pt;}
+
+  /* screenshots */
+  .shots{display:flex;gap:12px;justify-content:center;align-items:flex-start;margin:10px 0 2px;flex-wrap:wrap;}
+  .fig{text-align:center;}
+  .fig img{border:1px solid var(--line);border-radius:9px;box-shadow:0 1px 5px rgba(0,0,0,.10);background:#fff;}
+  .cap{font-size:12.5pt;color:var(--sub);margin-top:5px;line-height:1.25;}
+  .badge{display:inline-flex;align-items:center;justify-content:center;
+    width:22px;height:22px;border-radius:50%;background:#FFD400;color:#3a2f00;
+    font-weight:bold;font-size:12.5pt;margin-right:5px;border:1px solid #e5b800;}
+
+  /* tables */
+  table{width:100%;border-collapse:collapse;margin:8px 0;font-size:13.5pt;}
+  th,td{border:1px solid #d9d6e0;padding:5px 8px;text-align:left;vertical-align:top;}
+  th{background:#efeaf9;font-weight:bold;color:#3a3350;}
+  tr:nth-child(even) td{background:#faf9fd;}
+  .tag{display:inline-block;padding:1px 8px;border-radius:20px;font-size:12pt;font-weight:bold;}
+  .tg-gray{background:#eef;color:#555;} .tg-orange{background:#FFF1DE;color:#B8690A;}
+  .tg-green{background:#E4F8EA;color:#1F8A3B;} .tg-red{background:#FDE7E7;color:#C62828;}
+
+  /* ── cover ── */
+  .cover{justify-content:center;}
+  .cover .um{font-family:Arial,Helvetica,sans-serif;font-size:40pt;font-weight:bold;
+    letter-spacing:1px;color:#2a2730;margin:0;}
+  .cover hr{border:none;border-top:2px solid #2a2730;margin:8px 0 16px;}
+  .cover .ct1{font-size:20pt;margin:0 0 4px;}
+  .cover .ct2{font-size:22pt;font-weight:bold;color:var(--pur);margin:0;}
+  .cover .clogo{height:82px;margin-bottom:30px;}
+  .cover .cmeta{position:absolute;left:16mm;bottom:22mm;font-size:14pt;color:var(--sub);}
+  .cover .cfoot{position:absolute;left:0;right:0;bottom:9mm;text-align:center;
+    font-size:9.5pt;color:#b3b0bb;padding:0 16mm;}
+
+  /* ── TOC ── */
+  .toc-row{display:flex;align-items:baseline;font-size:16pt;margin:9px 0;}
+  .toc-row .lead{flex:1;border-bottom:1.5px dotted #b9b5c4;margin:0 6px;transform:translateY(-4px);}
+  .toc-row.lv2{padding-left:22px;font-size:15pt;color:#403d49;}
+  .toc-ph{font-weight:bold;}
+
+  /* ── flowchart ── */
+  .flow{display:flex;flex-direction:column;align-items:center;margin-top:6px;}
+  .fnode{width:74%;text-align:center;padding:11px 14px;border-radius:12px;font-size:15pt;
+    background:#ECE7FB;color:#3a3350;border:1px solid #d7cdf3;}
+  .fnode.dark{width:150px;background:var(--darknode);color:#fff;border:none;font-weight:bold;border-radius:22px;}
+  .farrow{color:#9b8fc4;font-size:17pt;line-height:1;margin:5px 0;}
+</style>
+</head>
+<body>
+
+<!-- ═══════════ PAGE 1 : COVER ═══════════ -->
+<div class="page cover">
+  <img src="../../assets/logo.png" class="clogo" alt="Vizzel">
+  <div class="um">USER MANUAL</div>
+  <hr>
+  <div class="ct1">คู่มือประกอบการใช้งาน</div>
+  <div class="ct2">เรื่อง การเข้าใช้งานระบบ Vizzel Sales ผ่าน LINE</div>
+  <div class="cmeta">
+    ระบบบริหารงานขายหน่วยงานราชการ (Vizzel Sales CRM)<br>
+    เวอร์ชันแอป : v20260522j &nbsp;·&nbsp; ปรับปรุง : กรกฎาคม 2569
+  </div>
+  <div class="cfoot">เอกสารนี้จัดทำเพื่อประกอบการใช้งานระบบ Vizzel Sales — สงวนลิขสิทธิ์ © บริษัท วิซเซล อินเทล จำกัด</div>
+</div>
+
+<!-- ═══════════ PAGE 2 : สารบัญ ═══════════ -->
+<div class="page">
+  <div class="phead">
+    <div><div class="ht1">คู่มือการใช้งาน</div><div class="ht2">การเข้าใช้งานระบบ Vizzel Sales ผ่าน LINE</div></div>
+    <img src="../../assets/logo.png" alt="">
+  </div>
+  <div class="pbody">
+    <h1 class="sec">สารบัญ</h1>
+    <div class="toc-row"><span class="toc-ph">สรุปขั้นตอนการใช้งาน</span><span class="lead"></span><span>3</span></div>
+    <div class="toc-row"><span class="toc-ph">รายละเอียดขั้นตอนการใช้งาน</span><span class="lead"></span><span>4</span></div>
+    <div class="toc-row lv2"><span>ส่วนที่ 1 การเข้าสู่ระบบผ่าน LINE</span><span class="lead"></span><span>4</span></div>
+    <div class="toc-row lv2"><span>ส่วนที่ 2 การลงทะเบียนใช้งานครั้งแรก</span><span class="lead"></span><span>5</span></div>
+    <div class="toc-row lv2"><span>ส่วนที่ 3 การยืนยันอีเมล (OTP)</span><span class="lead"></span><span>6</span></div>
+    <div class="toc-row lv2"><span>ส่วนที่ 4 แนะนำเมนูหลัก</span><span class="lead"></span><span>7</span></div>
+    <div class="toc-row lv2"><span>ส่วนที่ 5 การสร้างและกรอกข้อมูลโครงการ</span><span class="lead"></span><span>8</span></div>
+    <div class="toc-row lv2"><span>ส่วนที่ 6 การอัปเดตสถานะงานและแนบเอกสารตามขั้น</span><span class="lead"></span><span>9</span></div>
+    <div class="toc-row lv2"><span>ส่วนที่ 7 การลงนัดหมาย</span><span class="lead"></span><span>10</span></div>
+    <div class="toc-row lv2"><span>ส่วนที่ 8 การแนบไฟล์เอกสาร</span><span class="lead"></span><span>11</span></div>
+    <div class="toc-row lv2"><span>ส่วนที่ 9 ข้อห้ามและข้อควรระวัง</span><span class="lead"></span><span>12</span></div>
+    <div class="toc-row lv2"><span>ส่วนที่ 10 การออกจากระบบ</span><span class="lead"></span><span>13</span></div>
+  </div>
+  <div class="pfoot"><span>สงวนลิขสิทธิ์ © บริษัท วิซเซล อินเทล จำกัด</span><span class="pg"></span></div>
+</div>
+
+<!-- ═══════════ PAGE 3 : สรุปขั้นตอน (flowchart) ═══════════ -->
+<div class="page">
+  <div class="phead">
+    <div><div class="ht1">คู่มือการใช้งาน</div><div class="ht2">การเข้าใช้งานระบบ Vizzel Sales ผ่าน LINE</div></div>
+    <img src="../../assets/logo.png" alt="">
+  </div>
+  <div class="pbody">
+    <h1 class="sec">สรุปขั้นตอนการใช้งาน</h1>
+    <div class="sec-sub">การเข้าใช้งานระบบ Vizzel Sales ผ่าน LINE</div>
+    <div class="flow">
+      <div class="fnode dark">เริ่มต้น</div>
+      <div class="farrow">▼</div>
+      <div class="fnode">เพิ่มเพื่อน Vizzel Sales ใน LINE แล้วเปิดลิงก์ระบบ (LIFF)</div>
+      <div class="farrow">▼</div>
+      <div class="fnode">เข้าสู่ระบบด้วย LINE (อนุญาตให้เข้าถึงโปรไฟล์)</div>
+      <div class="farrow">▼</div>
+      <div class="fnode">ลงทะเบียนใช้งานครั้งแรก + กรอก Invite Code</div>
+      <div class="farrow">▼</div>
+      <div class="fnode">ยืนยันอีเมลด้วยรหัส OTP 6 หลัก</div>
+      <div class="farrow">▼</div>
+      <div class="fnode">เข้าใช้งานเมนูหลัก (Pipeline / โครงการ / นัดหมาย / เอกสาร)</div>
+      <div class="farrow">▼</div>
+      <div class="fnode dark">สิ้นสุด</div>
+    </div>
+  </div>
+  <div class="pfoot"><span>สงวนลิขสิทธิ์ © บริษัท วิซเซล อินเทล จำกัด</span><span class="pg"></span></div>
+</div>
+
+<!-- ═══════════ PAGE 4 : ส่วนที่ 1 เข้าสู่ระบบผ่าน LINE ═══════════ -->
+<div class="page">
+  <div class="phead">
+    <div><div class="ht1">คู่มือการใช้งาน</div><div class="ht2">การเข้าใช้งานระบบ Vizzel Sales ผ่าน LINE</div></div>
+    <img src="../../assets/logo.png" alt="">
+  </div>
+  <div class="pbody">
+    <h1 class="sec">รายละเอียดขั้นตอนการใช้งาน</h1>
+    <h2 class="sub">ส่วนที่ 1 การเข้าสู่ระบบผ่าน LINE</h2>
+    <p class="small muted">ระบบ Vizzel Sales เปิดใช้งานผ่าน LINE (LIFF) บนมือถือเป็นหลัก ผู้ใช้ไม่ต้องติดตั้งแอปเพิ่ม เพียงเปิดผ่านแอป LINE</p>
+
+    <div class="step"><span class="n">1)</span><span class="t"><span class="badge">1</span>เพิ่มเพื่อนบัญชีทางการ (Official Account) ของ Vizzel Sales ใน LINE จากนั้นเปิดลิงก์ระบบผ่านเมนู หรือลิงก์ <b>liff.line.me/2010133685-tke1EWht</b></span></div>
+    <div class="shots">
+      <div class="fig"><img src="images/00a-line-add-oa.png" style="height:60mm"><div class="cap">① เพิ่มเพื่อน Vizzel Sales ใน LINE</div></div>
+      <div class="fig"><img src="images/00b-line-open-liff.png" style="height:60mm"><div class="cap">② เปิดลิงก์ระบบผ่าน LINE</div></div>
+    </div>
+
+    <div class="step"><span class="n">2)</span><span class="t"><span class="badge">3</span>ครั้งแรกระบบจะให้ <b>เข้าสู่ระบบด้วย LINE</b> และขออนุญาตเข้าถึงข้อมูลโปรไฟล์/อีเมล — แตะ “อนุญาต” จากนั้นระบบจะแสดงหน้าโหลด “กำลังเชื่อมต่อ LINE...”</span></div>
+    <div class="note small">หากเปิดผ่านเบราว์เซอร์ภายนอก (Chrome/Safari) ระบบจะแนะนำให้ “เปิดผ่านแอป LINE (แนะนำ)” และมีปุ่ม <b>“เปิดในแอป LINE”</b> เพื่อให้เข้าสู่ระบบได้ถูกต้อง</div>
+    <div class="shots">
+      <div class="fig"><img src="images/00c-line-login-consent.png" style="height:58mm"><div class="cap">③ อนุญาตให้ LINE เข้าสู่ระบบ</div></div>
+      <div class="fig"><img src="images/01-splash.png" style="height:58mm"><div class="cap">หน้าจอเชื่อมต่อระบบ (Splash)</div></div>
+    </div>
+  </div>
+  <div class="pfoot"><span>สงวนลิขสิทธิ์ © บริษัท วิซเซล อินเทล จำกัด</span><span class="pg"></span></div>
+</div>
+
+<!-- ═══════════ PAGE 5 : ส่วนที่ 2 ลงทะเบียน ═══════════ -->
+<div class="page">
+  <div class="phead">
+    <div><div class="ht1">คู่มือการใช้งาน</div><div class="ht2">การเข้าใช้งานระบบ Vizzel Sales ผ่าน LINE</div></div>
+    <img src="../../assets/logo.png" alt="">
+  </div>
+  <div class="pbody">
+    <h2 class="sub">ส่วนที่ 2 การลงทะเบียนใช้งานครั้งแรก</h2>
+    <p class="small">สำหรับผู้ใช้ใหม่ที่ยังไม่มีบัญชีในระบบ ระบบจะแสดงหน้า <b>“ลงทะเบียนใช้งาน”</b> โดยดึงชื่อจากโปรไฟล์ LINE ให้อัตโนมัติ ผู้ใช้กรอกข้อมูลให้ครบแล้วกดปุ่ม <b>“ลงทะเบียน”</b></p>
+    <div class="shots">
+      <div class="fig"><img src="images/02-register.png" style="height:118mm"><div class="cap">ตัวอย่างหน้าจอลงทะเบียนใช้งาน</div></div>
+      <div style="flex:1;min-width:70mm;text-align:left">
+        <p class="small"><b>ช่องข้อมูลที่ต้องกรอก</b> (ช่องที่มี * บังคับกรอก)</p>
+        <table class="small">
+          <tr><th>ช่อง</th><th>บังคับ</th></tr>
+          <tr><td>ชื่อ *</td><td>ใช่</td></tr>
+          <tr><td>นามสกุล *</td><td>ใช่</td></tr>
+          <tr><td>เบอร์โทร</td><td>ไม่</td></tr>
+          <tr><td>Email *</td><td>ใช่</td></tr>
+          <tr><td>ภูมิภาค</td><td>ไม่</td></tr>
+          <tr><td>Invite Code *</td><td>ใช่</td></tr>
+        </table>
+        <div class="note small"><b>Invite Code</b> คือรหัสเชิญของบริษัท ต้องกรอกให้ถูกต้อง ระบบจะตรวจสอบและแสดงชื่อบริษัทเมื่อรหัสถูกต้อง หากไม่ถูกต้องจะขึ้น “invite code ไม่ถูกต้อง”</div>
+        <p class="small muted">เมื่อลงทะเบียนสำเร็จ ระบบกำหนดสิทธิ์เริ่มต้นเป็น <b>dealer</b></p>
+      </div>
+    </div>
+  </div>
+  <div class="pfoot"><span>สงวนลิขสิทธิ์ © บริษัท วิซเซล อินเทล จำกัด</span><span class="pg"></span></div>
+</div>
+
+<!-- ═══════════ PAGE 6 : ส่วนที่ 3 ยืนยันอีเมล ═══════════ -->
+<div class="page">
+  <div class="phead">
+    <div><div class="ht1">คู่มือการใช้งาน</div><div class="ht2">การเข้าใช้งานระบบ Vizzel Sales ผ่าน LINE</div></div>
+    <img src="../../assets/logo.png" alt="">
+  </div>
+  <div class="pbody">
+    <h2 class="sub">ส่วนที่ 3 การยืนยันอีเมล (OTP)</h2>
+    <p class="small">ก่อนใช้งานเมนูต่าง ๆ ระบบบังคับให้ <b>ยืนยันอีเมล</b> ก่อน (เพื่อให้ส่งคำเชิญปฏิทิน Google/Outlook ได้) หากยังไม่ยืนยัน ระบบจะบล็อกการใช้งานส่วนอื่น</p>
+    <div class="shots">
+      <div class="fig"><img src="images/03-email-verify.png" style="height:98mm"><div class="cap">ตัวอย่างหน้าจอยืนยันอีเมลก่อนใช้งาน</div></div>
+      <div style="flex:1;min-width:72mm;text-align:left">
+        <p class="small"><b>ขั้นตอน</b></p>
+        <div class="step small"><span class="n">1)</span><span class="t">กรอกอีเมล แล้วกด <b>“ส่งรหัส OTP”</b></span></div>
+        <div class="step small"><span class="n">2)</span><span class="t">เปิดอีเมลเพื่อดูรหัส OTP 6 หลัก</span></div>
+        <div class="step small"><span class="n">3)</span><span class="t">กรอกรหัส แล้วกด <b>“ยืนยันอีเมล”</b></span></div>
+        <p class="small" style="margin-top:6px"><b>เงื่อนไขของ OTP</b></p>
+        <ul class="small">
+          <li>รหัสมี 6 หลัก อายุ 10 นาที</li>
+          <li>ขอรหัสใหม่ได้ทุก 60 วินาที</li>
+          <li>กรอกผิดได้สูงสุด 5 ครั้ง จากนั้นต้องขอรหัสใหม่</li>
+        </ul>
+        <div class="note small">เมื่อยืนยันสำเร็จจะขึ้นข้อความ “ยืนยันอีเมลสำเร็จ ✓” และเข้าใช้งานระบบได้ทันที</div>
+      </div>
+    </div>
+  </div>
+  <div class="pfoot"><span>สงวนลิขสิทธิ์ © บริษัท วิซเซล อินเทล จำกัด</span><span class="pg"></span></div>
+</div>
+
+<!-- ═══════════ PAGE 7 : ส่วนที่ 4 เมนูหลัก ═══════════ -->
+<div class="page">
+  <div class="phead">
+    <div><div class="ht1">คู่มือการใช้งาน</div><div class="ht2">การเข้าใช้งานระบบ Vizzel Sales ผ่าน LINE</div></div>
+    <img src="../../assets/logo.png" alt="">
+  </div>
+  <div class="pbody">
+    <h2 class="sub">ส่วนที่ 4 แนะนำเมนูหลัก</h2>
+    <p class="small">เมื่อเข้าสู่ระบบสำเร็จจะพบหน้าหลัก ด้านบนแสดง “สวัสดี, {ชื่อผู้ใช้}” มีแท็บหลัก 2 แท็บ คือ <b>📊 Pipeline</b> และ <b>📋 โครงการ</b> และเมนูโปรไฟล์ (แตะที่รูป/ชื่อผู้ใช้)</p>
+    <div class="shots">
+      <div class="fig"><img src="images/04-main-pipeline.png" style="height:110mm"><div class="cap">แท็บ Pipeline (หน้าจอแรกหลังเข้าสู่ระบบ)</div></div>
+      <div class="fig"><img src="images/05-profile-menu.png" style="height:110mm"><div class="cap">เมนูโปรไฟล์ / ออกจากระบบ</div></div>
+    </div>
+    <table class="small">
+      <tr><th>เมนู / แท็บ</th><th>รายละเอียด</th><th>สิทธิ์ที่เห็น</th></tr>
+      <tr><td>📊 Pipeline</td><td>ภาพรวมโครงการแยกตามสถานะ + รายการโครงการล่าสุด (ค้นหา/กรองได้)</td><td>ทุกสิทธิ์</td></tr>
+      <tr><td>📋 โครงการ</td><td>ค้นหาหน่วยงานทั้งระบบก่อนสร้าง และสร้างโครงการใหม่</td><td>ทุกสิทธิ์</td></tr>
+      <tr><td>👤 ข้อมูลส่วนตัว</td><td>ดู/แก้ไขข้อมูลส่วนตัว</td><td>ทุกสิทธิ์</td></tr>
+      <tr><td>👥 ข้อมูลพนักงาน / 🏢 ข้อมูลบริษัท</td><td>จัดการพนักงานและบริษัท</td><td>เฉพาะ support / admin</td></tr>
+    </table>
+  </div>
+  <div class="pfoot"><span>สงวนลิขสิทธิ์ © บริษัท วิซเซล อินเทล จำกัด</span><span class="pg"></span></div>
+</div>
+
+<!-- ═══════════ PAGE 8 : ส่วนที่ 5 สร้าง/กรอกโครงการ ═══════════ -->
+<div class="page">
+  <div class="phead">
+    <div><div class="ht1">คู่มือการใช้งาน</div><div class="ht2">การเข้าใช้งานระบบ Vizzel Sales ผ่าน LINE</div></div>
+    <img src="../../assets/logo.png" alt="">
+  </div>
+  <div class="pbody">
+    <h2 class="sub">ส่วนที่ 5 การสร้างและกรอกข้อมูลโครงการ</h2>
+    <p class="small">ที่แท็บ <b>📋 โครงการ</b> ให้ค้นหาหน่วยงานก่อน หากยังไม่มีให้กดปุ่ม <b>“+ สร้าง”</b> ระบบจะเปิดหน้าต่าง “สร้างโครงการใหม่” กรอกข้อมูลให้ครบ (ช่อง * บังคับ) แล้วกด <b>“สร้างโครงการ”</b></p>
+    <div class="shots">
+      <div class="fig"><img src="images/06-projects-directory.png" style="height:104mm"><div class="cap">แท็บโครงการ — ค้นหา/กดปุ่ม “+ สร้าง”</div></div>
+      <div class="fig"><img src="images/07-create-project.png" style="height:104mm"><div class="cap">หน้าต่างสร้างโครงการใหม่</div></div>
+    </div>
+    <p class="small"><b>ช่องบังคับกรอก:</b> ชื่อหน่วยงาน · ประเภทหน่วยงาน · จังหวัด · ผู้ติดต่อ · ตำแหน่ง · โทรศัพท์</p>
+    <div class="note small"><b>ข้อควรระวัง:</b> ต้องกรอกชื่อหน่วยงาน <b>แบบเต็ม ห้ามใช้ตัวย่อหรือจุด (.)</b> เช่น “องค์การบริหารส่วนตำบลหนองแวง” (ไม่ใช้ “อบต.”) มิฉะนั้นระบบจะแจ้งเตือน และหากมีชื่อโครงการซ้ำจะสร้างใหม่ได้เฉพาะกรณีโครงการเดิมเป็นสถานะ Reject เท่านั้น</div>
+  </div>
+  <div class="pfoot"><span>สงวนลิขสิทธิ์ © บริษัท วิซเซล อินเทล จำกัด</span><span class="pg"></span></div>
+</div>
+
+<!-- ═══════════ PAGE 9 : ส่วนที่ 6 อัปเดตสถานะ + เอกสาร ═══════════ -->
+<div class="page">
+  <div class="phead">
+    <div><div class="ht1">คู่มือการใช้งาน</div><div class="ht2">การเข้าใช้งานระบบ Vizzel Sales ผ่าน LINE</div></div>
+    <img src="../../assets/logo.png" alt="">
+  </div>
+  <div class="pbody">
+    <h2 class="sub">ส่วนที่ 6 การอัปเดตสถานะงานและแนบเอกสารตามขั้น</h2>
+    <p class="small">แตะที่รายการโครงการเพื่อเปิดรายละเอียด ภายในมี 4 แท็บย่อย: <b>ข้อมูล · อัพเดทงาน · นัดหมาย · เอกสาร</b> การเลื่อนสถานะงานทำได้โดยแนบเอกสารตามขั้น (แท็บ “อัพเดทงาน”) และแก้ไขข้อมูลได้ที่แท็บ “ข้อมูล” (ปุ่ม ✏️ แก้ไขข้อมูล)</p>
+    <div class="shots">
+      <div class="fig"><img src="images/08-detail-info.png" style="height:100mm"><div class="cap">แท็บข้อมูลโครงการ</div></div>
+      <div class="fig"><img src="images/09-detail-work-docs.png" style="height:100mm"><div class="cap">แท็บอัพเดทงาน (แนบเอกสารตามขั้น)</div></div>
+    </div>
+    <table class="small">
+      <tr><th>สถานะ (Pipeline)</th><th>ความหมาย</th><th>เอกสารที่แนบเพื่อเลื่อนขั้น</th></tr>
+      <tr><td><span class="tag tg-gray">Register</span></td><td>เริ่มต้น/ลงทะเบียนหน่วยงาน</td><td>ใบเสนอราคา (Support/Dealer)</td></tr>
+      <tr><td><span class="tag tg-orange">Quotation</span></td><td>ส่งใบเสนอราคาแล้ว</td><td>ร่าง TOR (Support บังคับ / Dealer ไม่บังคับ)</td></tr>
+      <tr><td><span class="tag tg-orange">TOR</span></td><td>ส่งร่าง TOR แล้ว</td><td>เอกสารสัญญาจัดซื้อจัดจ้าง</td></tr>
+      <tr><td><span class="tag tg-green">Contract</span></td><td>ทำสัญญาแล้ว</td><td>เอกสารปิดงาน (เฉพาะ support/admin)</td></tr>
+      <tr><td><span class="tag tg-green">Closed</span></td><td>ปิดงานเรียบร้อย</td><td>—</td></tr>
+      <tr><td><span class="tag tg-red">Reject</span></td><td>ปฏิเสธ (ต้องระบุเหตุผล)</td><td>—</td></tr>
+    </table>
+  </div>
+  <div class="pfoot"><span>สงวนลิขสิทธิ์ © บริษัท วิซเซล อินเทล จำกัด</span><span class="pg"></span></div>
+</div>
+
+<!-- ═══════════ PAGE 10 : ส่วนที่ 7 นัดหมาย ═══════════ -->
+<div class="page">
+  <div class="phead">
+    <div><div class="ht1">คู่มือการใช้งาน</div><div class="ht2">การเข้าใช้งานระบบ Vizzel Sales ผ่าน LINE</div></div>
+    <img src="../../assets/logo.png" alt="">
+  </div>
+  <div class="pbody">
+    <h2 class="sub">ส่วนที่ 7 การลงนัดหมาย</h2>
+    <p class="small">ที่แท็บ <b>นัดหมาย</b> ในหน้ารายละเอียดโครงการ มีนัดหมาย 3 ประเภท: <b>🎯 พรีเซ็น · 🖥 Demo · 📍 Site Survey</b> (นัดได้สูงสุด 10 ครั้งต่อประเภท) กดปุ่มนัดหมายของประเภทที่ต้องการเพื่อเปิดฟอร์ม แล้วกด <b>“บันทึกนัดหมาย”</b></p>
+    <div class="shots">
+      <div class="fig"><img src="images/10-appointment-form.png" style="height:112mm"><div class="cap">ตัวอย่างฟอร์มลงนัดหมาย (พรีเซ็น)</div></div>
+      <div style="flex:1;min-width:72mm;text-align:left">
+        <p class="small"><b>ช่องข้อมูลในฟอร์ม</b></p>
+        <ul class="small">
+          <li><b>วันและเวลา *</b> — บังคับเลือก</li>
+          <li><b>รูปแบบ *</b> (เฉพาะพรีเซ็น) — 🖥 Online หรือ 🏢 Onsite</li>
+          <li>กรณี Online เลือกห้อง Google Meet: <b>สร้างห้องเอง</b> หรือ <b>ให้ทีม Vizzel สร้าง</b> (แนบลิงก์ได้)</li>
+          <li><b>หมายเหตุ / ฝ่าย / รายละเอียด</b> — ไม่บังคับ</li>
+        </ul>
+        <div class="note small"><b>เงื่อนไข:</b> ระบบส่งคำเชิญปฏิทิน (Google / ไฟล์ .ics) ให้เฉพาะผู้ใช้ที่ <b>ยืนยันอีเมลแล้ว</b> เท่านั้น และหากโครงการปิดงาน (Closed/Reject) จะเพิ่ม/แก้ไข/ลบนัดหมายไม่ได้</div>
+      </div>
+    </div>
+  </div>
+  <div class="pfoot"><span>สงวนลิขสิทธิ์ © บริษัท วิซเซล อินเทล จำกัด</span><span class="pg"></span></div>
+</div>
+
+<!-- ═══════════ PAGE 11 : ส่วนที่ 8 แนบไฟล์เอกสาร ═══════════ -->
+<div class="page">
+  <div class="phead">
+    <div><div class="ht1">คู่มือการใช้งาน</div><div class="ht2">การเข้าใช้งานระบบ Vizzel Sales ผ่าน LINE</div></div>
+    <img src="../../assets/logo.png" alt="">
+  </div>
+  <div class="pbody">
+    <h2 class="sub">ส่วนที่ 8 การแนบไฟล์เอกสาร</h2>
+    <p class="small">กดปุ่มแนบเอกสารในหน้ารายละเอียดโครงการ ระบบจะเปิดหน้า “อัปโหลดเอกสาร” ให้เลือกไฟล์แล้วกด <b>“อัปโหลด”</b> เมื่อสำเร็จจะขึ้น “อัปโหลดสำเร็จ ✓” และปิดหน้ากลับสู่แอปอัตโนมัติ</p>
+    <div class="shots">
+      <div class="fig"><img src="images/11-upload.png" style="height:92mm"><div class="cap">ตัวอย่างหน้าจออัปโหลดเอกสาร</div></div>
+      <div style="flex:1;min-width:74mm;text-align:left">
+        <p class="small"><b>รองรับเฉพาะไฟล์ PDF, Word และ Excel เท่านั้น</b></p>
+        <table class="small">
+          <tr><th>ประเภทเอกสาร</th><th>จำนวนสูงสุด</th></tr>
+          <tr><td>ใบเสนอราคา / TOR / สัญญา / ปิดงาน</td><td>1 ไฟล์ต่อชนิด</td></tr>
+          <tr><td>เอกสาร Site Survey</td><td>3 ไฟล์</td></tr>
+          <tr><td>เอกสารประกอบ</td><td>5 ไฟล์</td></tr>
+        </table>
+        <div class="note small">เอกสารบางชนิด (ใบเสนอราคา/TOR ฝั่ง Support และเอกสารปิดงาน) แนบได้เฉพาะสิทธิ์ <b>support/admin</b> — เอกสารชนิดเดียวกันที่แนบครบแล้วต้องลบก่อนจึงจะแนบใหม่ได้</div>
+      </div>
+    </div>
+  </div>
+  <div class="pfoot"><span>สงวนลิขสิทธิ์ © บริษัท วิซเซล อินเทล จำกัด</span><span class="pg"></span></div>
+</div>
+
+<!-- ═══════════ PAGE 12 : ส่วนที่ 9 ข้อห้าม/ข้อควรระวัง ═══════════ -->
+<div class="page">
+  <div class="phead">
+    <div><div class="ht1">คู่มือการใช้งาน</div><div class="ht2">การเข้าใช้งานระบบ Vizzel Sales ผ่าน LINE</div></div>
+    <img src="../../assets/logo.png" alt="">
+  </div>
+  <div class="pbody">
+    <h2 class="sub">ส่วนที่ 9 ข้อห้ามและข้อควรระวัง</h2>
+    <p class="small muted">สรุปข้อจำกัดและข้อความแจ้งเตือนที่พบระหว่างใช้งานจริง (อ้างอิงจากระบบ)</p>
+    <table class="small">
+      <tr><th style="width:34%">หัวข้อ</th><th>รายละเอียด</th></tr>
+      <tr><td><b>ต้องยืนยันอีเมลก่อน</b></td><td>หากยังไม่ยืนยันอีเมล ระบบบล็อกการใช้งานเมนูงานทั้งหมด (ขึ้น “กรุณายืนยันอีเมลก่อนใช้งาน”)</td></tr>
+      <tr><td><b>Invite Code</b></td><td>ต้องกรอกให้ถูกต้องตอนลงทะเบียน หากผิดขึ้น “invite code ไม่ถูกต้อง”</td></tr>
+      <tr><td><b>รหัส OTP</b></td><td>อายุ 10 นาที · ขอใหม่ได้ทุก 60 วินาที · กรอกผิดเกิน 5 ครั้งต้องขอรหัสใหม่</td></tr>
+      <tr><td><b>เปลี่ยนอีเมล</b></td><td>ต้องกดส่ง OTP และยืนยันก่อน จึงจะบันทึกอีเมลใหม่ได้</td></tr>
+      <tr><td><b>ชื่อหน่วยงาน</b></td><td>ห้ามใช้ตัวย่อหรือจุด (.) ต้องกรอกชื่อเต็ม</td></tr>
+      <tr><td><b>ชื่อโครงการซ้ำ</b></td><td>สร้างซ้ำได้เฉพาะเมื่อโครงการเดิมมีสถานะ Reject</td></tr>
+      <tr><td><b>งานที่ปิดแล้ว (Closed/Reject)</b></td><td>แก้ไขข้อมูล เปลี่ยนสถานะ เพิ่ม/ลบนัดหมาย หรือลบเอกสารไม่ได้</td></tr>
+      <tr><td><b>การ Reject งาน</b></td><td>ต้องระบุเหตุผลก่อนยืนยัน (“กรุณาระบุเหตุผลที่ปฏิเสธ”)</td></tr>
+      <tr><td><b>สิทธิ์ผู้ใช้ (Role)</b></td><td>dealer มองเห็นเฉพาะบริษัทตนเอง · เมนูพนักงาน/บริษัท และเอกสารบางชนิดเฉพาะ support/admin</td></tr>
+      <tr><td><b>นัดหมาย</b></td><td>สูงสุด 10 ครั้งต่อประเภท · พรีเซ็นต้องเลือกรูปแบบ Online/Onsite</td></tr>
+      <tr><td><b>ไฟล์เอกสาร</b></td><td>รองรับเฉพาะ PDF, Word, Excel · จำกัดจำนวนตามชนิดเอกสาร</td></tr>
+      <tr><td><b>รายละเอียดเพิ่มเติม</b></td><td>ความยาวไม่เกิน 2,000 ตัวอักษร</td></tr>
+      <tr><td><b>ปิดงานอัตโนมัติ</b></td><td>โครงการที่ไม่มีความเคลื่อนไหวจะมีนับถอยหลังก่อนปิดอัตโนมัติ (แสดง ⏱ จำนวนวัน)</td></tr>
+    </table>
+  </div>
+  <div class="pfoot"><span>สงวนลิขสิทธิ์ © บริษัท วิซเซล อินเทล จำกัด</span><span class="pg"></span></div>
+</div>
+
+<!-- ═══════════ PAGE 13 : ส่วนที่ 10 ออกจากระบบ ═══════════ -->
+<div class="page">
+  <div class="phead">
+    <div><div class="ht1">คู่มือการใช้งาน</div><div class="ht2">การเข้าใช้งานระบบ Vizzel Sales ผ่าน LINE</div></div>
+    <img src="../../assets/logo.png" alt="">
+  </div>
+  <div class="pbody">
+    <h2 class="sub">ส่วนที่ 10 การออกจากระบบ</h2>
+    <p class="small">แตะที่รูป/ชื่อผู้ใช้มุมบนเพื่อเปิดเมนูโปรไฟล์ แล้วเลือก <b>“🚪 ออกจากระบบ”</b> ระบบจะล้างข้อมูลการเข้าสู่ระบบและกลับไปหน้าเริ่มต้น เมื่อต้องการกลับเข้าใช้งานให้เปิดลิงก์ระบบผ่าน LINE อีกครั้ง</p>
+    <div class="note">คำแนะนำ: หากพบปัญหาหน้าจอค้างหรือเข้าสู่ระบบไม่สำเร็จ ให้กด “ลองใหม่” หรือปิด–เปิดลิงก์ผ่านแอป LINE อีกครั้ง และตรวจสอบการเชื่อมต่ออินเทอร์เน็ต</div>
+
+    <h2 class="sub" style="margin-top:22px">ภาคผนวก</h2>
+    <ul class="small">
+      <li>ลิงก์เข้าระบบผ่าน LINE (LIFF): <b>liff.line.me/2010133685-tke1EWht</b></li>
+      <li>เว็บแอป: <b>vizzelintel.github.io/vizzel-sales-frontend/</b></li>
+      <li>สิทธิ์ผู้ใช้: dealer (เริ่มต้น) · support · admin</li>
+    </ul>
+    <p class="small muted" style="margin-top:14px">หมายเหตุ: ภาพหน้าจอในคู่มือนี้เป็นภาพจากระบบจริง (ถ่ายอัตโนมัติที่ความละเอียดหน้าจอมือถือ) ยกเว้นภาพขั้นตอนฝั่งแอป LINE (เพิ่มเพื่อน/หน้าอนุญาต) ซึ่งเป็นภาพตัวอย่างสำหรับแทรกภาพจริงภายหลัง</p>
+  </div>
+  <div class="pfoot"><span>สงวนลิขสิทธิ์ © บริษัท วิซเซล อินเทล จำกัด</span><span class="pg"></span></div>
+</div>
+
+<script>
+  // stamp "หน้า X / N" ในทุกหน้า (ยกเว้นหน้าปก)
+  (function(){
+    var pages = document.querySelectorAll('.page');
+    var total = pages.length;
+    pages.forEach(function(pg, i){
+      var el = pg.querySelector('.pfoot .pg');
+      if (el) el.textContent = 'หน้า ' + (i+1) + ' / ' + total;
+    });
+  })();
+</script>
+</body>
+</html>
