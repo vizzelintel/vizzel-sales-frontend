@@ -204,6 +204,92 @@ def shot(page, name, full=True, clip_selector=None):
     print("  ✓", name)
 
 
+# mock หน้าจอ LINE OA + Rich Menu (อ้างอิงหน้าจอจริงของ Vizzel Track Support)
+RICHMENU_HTML = r"""<!doctype html><html lang="th"><head><meta charset="utf-8">
+<meta name="viewport" content="width=390, initial-scale=1">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;font-family:'Noto Sans Thai','Sarabun',sans-serif;}
+  body{width:390px;background:#28344c;position:relative;color:#fff;}
+  .bar{display:flex;align-items:center;gap:8px;padding:12px 12px 10px;background:#28344c;}
+  .bk{font-size:20px;color:#cfd6e4;}
+  .oa-av{width:34px;height:34px;border-radius:50%;background:#fff;display:flex;align-items:center;
+        justify-content:center;font-size:9px;font-weight:700;color:#2b3a86;overflow:hidden;}
+  .oa-av img{width:100%;height:100%;object-fit:contain;}
+  .oa-t{flex:1;line-height:1.2;}
+  .oa-t b{font-size:16px;} .oa-t span{font-size:11px;color:#aeb6c6;}
+  .oa-ic{color:#cfd6e4;font-size:17px;margin-left:9px;}
+  .warn{display:flex;gap:8px;align-items:flex-start;background:#2f3c57;color:#d7deec;
+        font-size:11.5px;line-height:1.35;padding:10px 12px;}
+  .warn .x{margin-left:auto;color:#9aa4ba;}
+  .datechip{width:max-content;margin:14px auto 12px;
+        background:#3a465f;color:#cfd6e4;font-size:12px;padding:4px 14px;border-radius:20px;}
+  .msg{display:flex;gap:8px;padding:0 12px;align-items:flex-end;}
+  .msg .av{width:30px;height:30px;border-radius:50%;background:#fff;flex:0 0 auto;overflow:hidden;
+        display:flex;align-items:center;justify-content:center;}
+  .msg .av img{width:100%;height:100%;object-fit:contain;}
+  .bub{background:#FBF7DE;color:#333;border-radius:4px 16px 16px 16px;padding:11px 13px;
+       font-size:13.5px;line-height:1.5;max-width:250px;white-space:pre-line;position:relative;}
+  .tm{align-self:flex-end;font-size:10px;color:#9aa4ba;margin-left:4px;}
+  /* Rich menu */
+  .rm{margin-top:70px;height:300px;background:#fff;
+      border-top:1px solid #dfe3ea;display:flex;flex-direction:column;}
+  .rm-ban{flex:0 0 118px;background:linear-gradient(135deg,#efeafc,#e6f3fb);
+      position:relative;padding:16px 16px 0;overflow:hidden;}
+  .rm-ban h3{font-size:23px;font-weight:800;color:#3a2e6e;}
+  .rm-ban h3 em{color:#1a9bd7;font-style:normal;}
+  .chips{display:flex;gap:6px;margin-top:12px;}
+  .chip{font-size:9px;color:#6b6f86;background:#fff;border:1px solid #d8d3ec;border-radius:20px;padding:3px 9px;}
+  .rm-row{flex:1;display:flex;}
+  .rm-b{flex:1;border-right:1px dashed #e5e5ea;display:flex;flex-direction:column;
+        align-items:center;justify-content:center;gap:8px;text-align:center;position:relative;}
+  .rm-b:last-child{border-right:none;}
+  .rm-ic{font-size:30px;}
+  .rm-b .lb{font-size:14px;font-weight:700;color:#e0559b;line-height:1.25;}
+  .rm-b.p2 .lb{color:#7b4fd0;} .rm-b.p3 .lb{color:#2f8fd6;}
+  .rm-ar{color:#b7b2c6;font-size:15px;}
+  .hot{outline:3px solid #e2352f;outline-offset:-3px;border-radius:6px;background:#fff5f5;}
+  .cnum{position:absolute;top:6px;right:8px;width:24px;height:24px;border-radius:50%;
+        background:#FFD400;color:#3a2f00;font-weight:800;font-size:13px;
+        display:flex;align-items:center;justify-content:center;border:1px solid #e5b800;}
+  .inbar{height:44px;background:#fff;border-top:1px solid #e5e8ee;position:relative;
+         display:flex;align-items:center;justify-content:center;gap:8px;color:#6b7180;font-size:14px;}
+  .kb{position:absolute;left:12px;font-size:16px;color:#9aa2b2;}
+</style></head><body>
+  <div class="bar">
+    <span class="bk">&#8249;</span>
+    <div class="oa-av"><img src="../../assets/logo.png"></div>
+    <div class="oa-t"><b>Vizzel Track Support</b><br><span>ผู้รับผิดชอบเป็นผู้ตอบกลับ</span></div>
+    <span class="oa-ic">&#9906;</span><span class="oa-ic">&#9776;</span>
+  </div>
+  <div class="warn"><span>&#9650;</span>
+    <span>บัญชีนี้ไม่ได้เป็นบัญชีรับรอง โปรดตรวจสอบให้มั่นใจก่อนให้ข้อมูลส่วนบุคคลหรือทำธุรกรรมใดๆ</span>
+    <span class="x">&#10005;</span></div>
+  <div class="datechip">พ. 20 พ.ค.</div>
+  <div class="msg">
+    <div class="av"><img src="../../assets/logo.png"></div>
+    <div class="bub">สวัสดี คุณ B.
+นี่คือบัญชีทางการของ Vizzel Track Support
+ขอบคุณที่เป็นเพื่อนกับเรา🎉
+
+เราจะส่งข่าวสารล่าสุดผ่านบัญชีทางการนี้เป็นระยะ✉️
+เตรียมรับได้เลย!🎁</div>
+    <span class="tm">02:51</span>
+  </div>
+  <div class="rm">
+    <div class="rm-ban">
+      <h3>แตะเพื่อดู <em>ผลิตภัณฑ์</em></h3>
+      <div class="chips"><span class="chip">RFID Tracking</span><span class="chip">Real-time Dashboard</span><span class="chip">Smart Inventory</span></div>
+    </div>
+    <div class="rm-row">
+      <div class="rm-b p1"><div class="rm-ic">💬</div><div class="lb">ติดต่อ<br>เจ้าหน้าที่</div><div class="rm-ar">&#10142;</div></div>
+      <div class="rm-b p2"><div class="rm-ic">📍</div><div class="lb">รายชื่อ<br>ตัวแทนจำหน่าย</div><div class="rm-ar">&#10142;</div></div>
+      <div class="rm-b p3 hot"><div class="cnum">2</div><div class="rm-ic">👥</div><div class="lb">สำหรับคู่ค้า</div><div class="rm-ar">&#10142;</div></div>
+    </div>
+  </div>
+  <div class="inbar"><span class="kb">&#9000;</span>เมนู ▾</div>
+</body></html>"""
+
+
 def capture():
     os.makedirs(IMG, exist_ok=True)
     exe = chromium_path()
@@ -381,29 +467,41 @@ def capture():
         except Exception as e:
             print("  ! upload:", e)
 
-        # ── ภาพ placeholder สำหรับขั้นตอนฝั่ง LINE (capture จาก code ไม่ได้) ──
-        placeholders = [
-            ("00a-line-add-oa.png", "➕", "เพิ่มเพื่อน Vizzel Sales ใน LINE",
-             "สแกน QR / เพิ่มเพื่อน Official Account แล้วเปิดเมนู Rich Menu หรือลิงก์ LIFF"),
-            ("00b-line-open-liff.png", "🔗", "เปิดลิงก์ระบบผ่าน LINE",
-             "แตะลิงก์ liff.line.me/2010133685-tke1EWht เพื่อเปิดระบบในแอป LINE"),
-            ("00c-line-login-consent.png", "🔐", "อนุญาตให้ LINE เข้าสู่ระบบ",
-             "หน้าจอ LINE ขออนุญาตเข้าถึงโปรไฟล์/อีเมล — แตะ “อนุญาต” เพื่อเข้าใช้งาน"),
-        ]
-        for name, icon, title, desc in placeholders:
-            try:
-                ctx = b.new_context(**MOBILE)
-                page = ctx.new_page()
-                page.set_content(PLACEHOLDER_HTML % {"icon": icon, "title": title, "desc": desc})
-                page.wait_for_timeout(150)
-                shot(page, name, full=False)
-                ctx.close()
-            except Exception as e:
-                print("  ! placeholder", name, e)
+        # ── 00b) Rich Menu mock (หน้าต้อนรับ LINE OA + Rich Menu, เน้นปุ่ม "สำหรับคู่ค้า") ──
+        try:
+            ctx = b.new_context(**MOBILE)
+            page = ctx.new_page()
+            logo = os.path.join(REPO, "assets", "logo.png")
+            page.set_content(RICHMENU_HTML.replace("../../assets/logo.png", "file://" + logo))
+            page.wait_for_timeout(200)
+            shot(page, "00b-line-richmenu.png", full=True)
+            ctx.close()
+        except Exception as e:
+            print("  ! richmenu:", e)
 
         b.close()
+
+    # ── 00a) QR code เพิ่มเพื่อน LINE (สร้างจากลิงก์จริง — คมชัด) ──
+    make_qr(LINE_ADD_FRIEND_URL, os.path.join(IMG, "00a-line-qr.png"))
     trim_images()
     print("capture เสร็จสิ้น -> images/")
+
+
+LINE_ADD_FRIEND_URL = "https://lin.ee/UAOQyx0"
+
+
+def make_qr(data, out):
+    try:
+        import qrcode
+        from qrcode.constants import ERROR_CORRECT_M
+        qr = qrcode.QRCode(version=None, error_correction=ERROR_CORRECT_M, box_size=16, border=3)
+        qr.add_data(data)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="black", back_color="white")
+        img.save(out)
+        print("  ✓ 00a-line-qr.png (QR:", data + ")")
+    except Exception as e:
+        print("  ! qr:", e)
 
 
 def trim_images():
@@ -412,7 +510,10 @@ def trim_images():
         from PIL import Image, ImageChops
     except ImportError:
         print("  (ข้าม trim: ไม่มี Pillow)"); return
+    skip = ("00a-line-qr", "00b-line-richmenu")  # คง quiet-zone ของ QR และเฟรมมือถือของ Rich Menu ไว้
     for fn in glob.glob(os.path.join(IMG, "*.png")):
+        if any(s in os.path.basename(fn) for s in skip):
+            continue
         try:
             im = Image.open(fn).convert("RGB")
             diff = ImageChops.difference(im, Image.new("RGB", im.size, (255, 255, 255)))

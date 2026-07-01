@@ -79,7 +79,10 @@
   .cover hr{border:none;border-top:2px solid #2a2730;margin:8px 0 16px;}
   .cover .ct1{font-size:20pt;margin:0 0 4px;}
   .cover .ct2{font-size:22pt;font-weight:bold;color:var(--pur);margin:0;}
-  .cover .clogo{height:82px;margin-bottom:30px;}
+  .cover .clogo-box{display:inline-flex;align-items:center;justify-content:center;
+    background:#fff;border:1px solid #ece9f5;border-radius:22px;padding:22px 34px;
+    box-shadow:0 6px 22px rgba(80,55,150,.16);margin-bottom:32px;}
+  .cover .clogo{height:96px;display:block;}
   .cover .cmeta{position:absolute;left:16mm;bottom:22mm;font-size:14pt;color:var(--sub);}
   .cover .cfoot{position:absolute;left:0;right:0;bottom:9mm;text-align:center;
     font-size:9.5pt;color:#b3b0bb;padding:0 16mm;}
@@ -102,7 +105,7 @@
 
 <!-- ═══════════ PAGE 1 : COVER ═══════════ -->
 <div class="page cover">
-  <img src="../../assets/logo.png" class="clogo" alt="Vizzel">
+  <div class="clogo-box"><img src="../../assets/logo.png" class="clogo" alt="Vizzel"></div>
   <div class="um">USER MANUAL</div>
   <hr>
   <div class="ct1">คู่มือประกอบการใช้งาน</div>
@@ -150,7 +153,9 @@
     <div class="flow">
       <div class="fnode dark">เริ่มต้น</div>
       <div class="farrow">▼</div>
-      <div class="fnode">เพิ่มเพื่อน Vizzel Sales ใน LINE แล้วเปิดลิงก์ระบบ (LIFF)</div>
+      <div class="fnode">สแกน QR เพิ่มเพื่อน LINE บริษัท (Vizzel Track Support)</div>
+      <div class="farrow">▼</div>
+      <div class="fnode">แตะปุ่ม “สำหรับคู่ค้า” บน Rich Menu เพื่อเปิดระบบ</div>
       <div class="farrow">▼</div>
       <div class="fnode">เข้าสู่ระบบด้วย LINE (อนุญาตให้เข้าถึงโปรไฟล์)</div>
       <div class="farrow">▼</div>
@@ -175,19 +180,21 @@
   <div class="pbody">
     <h1 class="sec">รายละเอียดขั้นตอนการใช้งาน</h1>
     <h2 class="sub">ส่วนที่ 1 การเข้าสู่ระบบผ่าน LINE</h2>
-    <p class="small muted">ระบบ Vizzel Sales เปิดใช้งานผ่าน LINE (LIFF) บนมือถือเป็นหลัก ผู้ใช้ไม่ต้องติดตั้งแอปเพิ่ม เพียงเปิดผ่านแอป LINE</p>
+    <p class="small muted">ระบบ Vizzel Sales เปิดใช้งานผ่าน LINE บนมือถือเป็นหลัก ผู้ใช้ไม่ต้องติดตั้งแอปเพิ่ม เพียงเพิ่มเพื่อนบัญชี LINE ของบริษัทแล้วเปิดผ่าน Rich Menu</p>
 
-    <div class="step"><span class="n">1)</span><span class="t"><span class="badge">1</span>เพิ่มเพื่อนบัญชีทางการ (Official Account) ของ Vizzel Sales ใน LINE จากนั้นเปิดลิงก์ระบบผ่านเมนู หรือลิงก์ <b>liff.line.me/2010133685-tke1EWht</b></span></div>
+    <div class="step" style="margin:6px 0 2px"><span class="n">1)</span><span class="t"><span class="badge">1</span>สแกน QR Code เพื่อ <b>เพิ่มเพื่อน</b> บัญชี LINE ของบริษัท <b>“Vizzel Track Support”</b> แล้วกดปุ่ม “เพิ่มเพื่อน”</span></div>
+    <div class="shots" style="justify-content:flex-start;align-items:center;gap:16px">
+      <div class="fig"><img src="images/00a-line-qr.png" style="width:38mm;height:38mm"><div class="cap">① QR เพิ่มเพื่อน LINE บริษัท</div></div>
+      <div class="step" style="flex:1;min-width:70mm;margin:0"><span class="n">2)</span><span class="t"><span class="badge">2</span>เมื่อเพิ่มเพื่อนแล้ว ระบบจะแสดงหน้าต้อนรับพร้อม <b>Rich Menu</b> — แตะปุ่ม <b>“สำหรับคู่ค้า” (Dealer)</b> เพื่อเปิดหน้าจอเข้าใช้งานระบบ</span></div>
+    </div>
     <div class="shots">
-      <div class="fig"><img src="images/00a-line-add-oa.png" style="height:60mm"><div class="cap">① เพิ่มเพื่อน Vizzel Sales ใน LINE</div></div>
-      <div class="fig"><img src="images/00b-line-open-liff.png" style="height:60mm"><div class="cap">② เปิดลิงก์ระบบผ่าน LINE</div></div>
+      <div class="fig"><img src="images/00b-line-richmenu.png" style="max-width:150mm;max-height:60mm"><div class="cap">② แตะปุ่ม “สำหรับคู่ค้า” บน Rich Menu</div></div>
     </div>
 
-    <div class="step"><span class="n">2)</span><span class="t"><span class="badge">3</span>ครั้งแรกระบบจะให้ <b>เข้าสู่ระบบด้วย LINE</b> และขออนุญาตเข้าถึงข้อมูลโปรไฟล์/อีเมล — แตะ “อนุญาต” จากนั้นระบบจะแสดงหน้าโหลด “กำลังเชื่อมต่อ LINE...”</span></div>
-    <div class="note small">หากเปิดผ่านเบราว์เซอร์ภายนอก (Chrome/Safari) ระบบจะแนะนำให้ “เปิดผ่านแอป LINE (แนะนำ)” และมีปุ่ม <b>“เปิดในแอป LINE”</b> เพื่อให้เข้าสู่ระบบได้ถูกต้อง</div>
-    <div class="shots">
-      <div class="fig"><img src="images/00c-line-login-consent.png" style="height:58mm"><div class="cap">③ อนุญาตให้ LINE เข้าสู่ระบบ</div></div>
-      <div class="fig"><img src="images/01-splash.png" style="height:58mm"><div class="cap">หน้าจอเชื่อมต่อระบบ (Splash)</div></div>
+    <div class="step" style="margin:8px 0 2px"><span class="n">3)</span><span class="t"><span class="badge">3</span>ระบบจะเปิดหน้าจอเข้าใช้งานและ <b>เข้าสู่ระบบด้วย LINE</b> (ครั้งแรกขออนุญาตเข้าถึงโปรไฟล์/อีเมล — แตะ “อนุญาต”) จากนั้นแสดงหน้าโหลด “กำลังเชื่อมต่อ LINE...”</span></div>
+    <div class="shots" style="justify-content:flex-start;align-items:center;gap:16px">
+      <div class="fig"><img src="images/01-splash.png" style="height:52mm"><div class="cap">หน้าจอเชื่อมต่อระบบ (Splash)</div></div>
+      <div class="note small" style="flex:1;min-width:64mm">หากเปิดผ่านเบราว์เซอร์ภายนอก (Chrome/Safari) ระบบจะแนะนำให้ “เปิดผ่านแอป LINE (แนะนำ)” และมีปุ่ม <b>“เปิดในแอป LINE”</b> เพื่อให้เข้าสู่ระบบได้ถูกต้อง</div>
     </div>
   </div>
   <div class="pfoot"><span>สงวนลิขสิทธิ์ © บริษัท วิซเซล อินเทล จำกัด</span><span class="pg"></span></div>
