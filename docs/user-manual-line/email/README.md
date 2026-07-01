@@ -17,10 +17,11 @@
 
 ## ใช้เทมเพลต HTML (สวยกว่า)
 - คัดลอกทั้งไฟล์ `dealer-email.html` ไปวางในโหมด HTML ของโปรแกรมส่งอีเมล
-- รูปโลโก้/QR โหลดจาก GitHub Pages อัตโนมัติ (ต้องเผยแพร่ Pages ของ repo แล้ว):
-  - โลโก้: `https://vizzelintel.github.io/vizzel-sales-frontend/assets/logo.png`
-  - QR: `https://vizzelintel.github.io/vizzel-sales-frontend/docs/user-manual-line/images/00a-line-qr.png`
+- รูปในอีเมลโหลดจาก URL สาธารณะ (ขึ้นได้ทุกที่ ไม่ต้องแนบรูป):
+  - **QR:** บริการ `api.qrserver.com` (สร้างจากลิงก์ `https://lin.ee/UAOQyx0`) — ขึ้นชัวร์แม้ Pages ยังไม่เผยแพร่
+  - **โลโก้:** `https://vizzelintel.github.io/vizzel-sales-frontend/assets/logo.png` (Pages ของ main)
 - แก้ค่าในวงเล็บ `[...]` ให้เป็นข้อมูลบริษัท
+- หมายเหตุ: QR ยังอยู่ในไฟล์คู่มือ PDF (หน้า 4) ด้วย ต่อให้รูปในอีเมลไม่ขึ้น dealer ก็สแกนจาก PDF ได้
 
 ## ใช้ผ่าน AI
 วาง `prompt-th.txt` ให้ Claude/Gemini แล้วให้ช่วยร่าง/ปรับสำนวนได้ตามต้องการ
