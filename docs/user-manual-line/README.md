@@ -34,8 +34,9 @@ python3 build.py render     # เฉพาะ render manual.html -> PDF
 2. **ภาพขั้นตอนฝั่ง LINE:**
    - `00a-line-qr.png` = QR เพิ่มเพื่อน สร้างจากลิงก์ `https://lin.ee/UAOQyx0` ด้วย lib `qrcode` (ต้อง `pip install qrcode`)
      — หากเปลี่ยนลิงก์ ให้แก้ค่า `LINE_ADD_FRIEND_URL` ใน `build.py` แล้ว `python3 build.py capture`
-   - `00b-line-richmenu.png` = **ภาพจำลอง (mock) ชั่วคราว** ของหน้าต้อนรับ LINE OA + Rich Menu
-     — **รอแทนที่ด้วยภาพ Rich Menu จริง** (แนวนอน) จากบริษัท: วางไฟล์ทับชื่อเดิม แล้ว `python3 build.py render`
+   - `00b-line-richmenu.png` = ภาพ Rich Menu **จำลองความละเอียดสูงตามดีไซน์จริง** (สร้างด้วย HTML ใน `build.py`,
+     ฝังโลโก้เป็น data URI) เน้นปุ่ม Dealer/สำหรับคู่ค้าด้วยกรอบแดง + callout ②
+     — หากต้องการใช้ไฟล์ภาพจริงเป๊ะ ๆ ให้วางไฟล์ทับชื่อเดิม (ปิดการสร้างใน `build.py`) แล้ว `python3 build.py render`
 3. **ข้อความลิขสิทธิ์ท้ายหน้า** ใช้บรรทัดกลาง ๆ (“สงวนลิขสิทธิ์ © บริษัท วิซเซล อินเทล จำกัด”) — ปรับได้ที่ `manual.html`
 
 ## โครงสร้างเนื้อหา (13 หน้า)

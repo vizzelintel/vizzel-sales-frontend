@@ -36,6 +36,13 @@ PDF_OUT = os.path.join(HERE, "Vizzel-Sales-LINE-User-Manual.pdf")
 MOBILE = dict(viewport={"width": 390, "height": 844}, device_scale_factor=2, is_mobile=True)
 
 
+def logo_data_uri():
+    """ฝังโลโก้เป็น data URI (set_content โหลด file:// ไม่ได้เพราะ origin เป็น about:blank)"""
+    import base64
+    with open(os.path.join(REPO, "assets", "logo.png"), "rb") as f:
+        return "data:image/png;base64," + base64.b64encode(f.read()).decode()
+
+
 def chromium_path():
     c = glob.glob("/opt/pw-browsers/chromium-*/chrome-linux/chrome")
     if not c:
@@ -204,89 +211,110 @@ def shot(page, name, full=True, clip_selector=None):
     print("  ✓", name)
 
 
-# mock หน้าจอ LINE OA + Rich Menu (อ้างอิงหน้าจอจริงของ Vizzel Track Support)
+# ภาพ Rich Menu (จำลองความละเอียดสูงตามดีไซน์จริงของ Vizzel Track Support — แนวนอน)
+# เน้นปุ่ม "Dealer / สำหรับคู่ค้า" ด้วยกรอบแดง + callout ②
 RICHMENU_HTML = r"""<!doctype html><html lang="th"><head><meta charset="utf-8">
-<meta name="viewport" content="width=390, initial-scale=1">
+<meta name="viewport" content="width=1040, initial-scale=1">
 <style>
-  *{margin:0;padding:0;box-sizing:border-box;font-family:'Noto Sans Thai','Sarabun',sans-serif;}
-  body{width:390px;background:#28344c;position:relative;color:#fff;}
-  .bar{display:flex;align-items:center;gap:8px;padding:12px 12px 10px;background:#28344c;}
-  .bk{font-size:20px;color:#cfd6e4;}
-  .oa-av{width:34px;height:34px;border-radius:50%;background:#fff;display:flex;align-items:center;
-        justify-content:center;font-size:9px;font-weight:700;color:#2b3a86;overflow:hidden;}
-  .oa-av img{width:100%;height:100%;object-fit:contain;}
-  .oa-t{flex:1;line-height:1.2;}
-  .oa-t b{font-size:16px;} .oa-t span{font-size:11px;color:#aeb6c6;}
-  .oa-ic{color:#cfd6e4;font-size:17px;margin-left:9px;}
-  .warn{display:flex;gap:8px;align-items:flex-start;background:#2f3c57;color:#d7deec;
-        font-size:11.5px;line-height:1.35;padding:10px 12px;}
-  .warn .x{margin-left:auto;color:#9aa4ba;}
-  .datechip{width:max-content;margin:14px auto 12px;
-        background:#3a465f;color:#cfd6e4;font-size:12px;padding:4px 14px;border-radius:20px;}
-  .msg{display:flex;gap:8px;padding:0 12px;align-items:flex-end;}
-  .msg .av{width:30px;height:30px;border-radius:50%;background:#fff;flex:0 0 auto;overflow:hidden;
-        display:flex;align-items:center;justify-content:center;}
-  .msg .av img{width:100%;height:100%;object-fit:contain;}
-  .bub{background:#FBF7DE;color:#333;border-radius:4px 16px 16px 16px;padding:11px 13px;
-       font-size:13.5px;line-height:1.5;max-width:250px;white-space:pre-line;position:relative;}
-  .tm{align-self:flex-end;font-size:10px;color:#9aa4ba;margin-left:4px;}
-  /* Rich menu */
-  .rm{margin-top:70px;height:300px;background:#fff;
-      border-top:1px solid #dfe3ea;display:flex;flex-direction:column;}
-  .rm-ban{flex:0 0 118px;background:linear-gradient(135deg,#efeafc,#e6f3fb);
-      position:relative;padding:16px 16px 0;overflow:hidden;}
-  .rm-ban h3{font-size:23px;font-weight:800;color:#3a2e6e;}
-  .rm-ban h3 em{color:#1a9bd7;font-style:normal;}
-  .chips{display:flex;gap:6px;margin-top:12px;}
-  .chip{font-size:9px;color:#6b6f86;background:#fff;border:1px solid #d8d3ec;border-radius:20px;padding:3px 9px;}
-  .rm-row{flex:1;display:flex;}
-  .rm-b{flex:1;border-right:1px dashed #e5e5ea;display:flex;flex-direction:column;
-        align-items:center;justify-content:center;gap:8px;text-align:center;position:relative;}
-  .rm-b:last-child{border-right:none;}
-  .rm-ic{font-size:30px;}
-  .rm-b .lb{font-size:14px;font-weight:700;color:#e0559b;line-height:1.25;}
-  .rm-b.p2 .lb{color:#7b4fd0;} .rm-b.p3 .lb{color:#2f8fd6;}
-  .rm-ar{color:#b7b2c6;font-size:15px;}
-  .hot{outline:3px solid #e2352f;outline-offset:-3px;border-radius:6px;background:#fff5f5;}
-  .cnum{position:absolute;top:6px;right:8px;width:24px;height:24px;border-radius:50%;
-        background:#FFD400;color:#3a2f00;font-weight:800;font-size:13px;
-        display:flex;align-items:center;justify-content:center;border:1px solid #e5b800;}
-  .inbar{height:44px;background:#fff;border-top:1px solid #e5e8ee;position:relative;
-         display:flex;align-items:center;justify-content:center;gap:8px;color:#6b7180;font-size:14px;}
-  .kb{position:absolute;left:12px;font-size:16px;color:#9aa2b2;}
+  *{margin:0;padding:0;box-sizing:border-box;font-family:'Noto Sans Thai',sans-serif;}
+  .wrap{width:1040px;height:700px;position:relative;overflow:hidden;
+    background:linear-gradient(118deg,#c6b4f4 0%,#e9e2fb 30%,#ffffff 60%,#e6f5fb 100%);}
+  .wrap::before{content:"";position:absolute;inset:0;
+    background:radial-gradient(60% 55% at 82% 78%,rgba(46,205,230,.30),transparent 70%);}
+  /* top zone */
+  .top{position:relative;height:430px;padding:38px 44px;}
+  .logo{width:96px;height:96px;border-radius:50%;background:rgba(255,255,255,.6);
+    border:1px solid rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center;
+    box-shadow:0 6px 20px rgba(90,60,160,.18);}
+  .logo img{width:74px;height:74px;object-fit:contain;}
+  .plat{display:inline-block;margin-top:20px;font-size:15px;font-weight:700;letter-spacing:3px;
+    color:#6a4bd0;border:1.5px solid #b6a4ec;border-radius:24px;padding:7px 18px;background:rgba(255,255,255,.35);}
+  .plat b{color:#3ac7e0;}
+  h1{margin-top:16px;font-weight:800;line-height:.98;}
+  h1 .l1{display:block;font-size:66px;color:#171a3c;}
+  h1 .l2{display:block;font-size:66px;
+    background:linear-gradient(90deg,#7B3FF2,#12a9d6);-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .chips{margin-top:22px;display:flex;gap:10px;}
+  .chip{font-size:14px;color:#5b6070;background:rgba(255,255,255,.75);border:1px solid #d7d1ec;
+    border-radius:22px;padding:7px 16px;}
+  /* dashboard card */
+  .dash{position:absolute;right:44px;top:46px;width:556px;background:#0e1730;border-radius:16px;
+    padding:16px 18px;box-shadow:0 18px 40px rgba(20,20,60,.28);color:#e7ecf7;}
+  .dbar{display:flex;align-items:center;gap:8px;font-size:14px;color:#aeb7cc;letter-spacing:1px;}
+  .dot{width:11px;height:11px;border-radius:50%;} .r{background:#ff5f57;}.y{background:#febc2e;}.g{background:#28c840;}
+  .live{margin-left:auto;color:#37e0c8;font-weight:700;font-size:13px;letter-spacing:1px;}
+  .live b{color:#37e0c8;}
+  .tiles{display:flex;gap:12px;margin-top:14px;}
+  .tile{flex:1;background:#16203c;border:1px solid #24304f;border-radius:12px;padding:12px 14px;}
+  .tile .k{font-size:12px;letter-spacing:2px;color:#8f9ab6;}
+  .tile .v{font-size:30px;font-weight:800;color:#fff;margin-top:4px;}
+  .tile.hl{border-color:#2aa7d8;background:#132a44;} .tile.hl .v{color:#38b6e6;}
+  .chart{margin-top:12px;background:#16203c;border:1px solid #24304f;border-radius:12px;height:120px;padding:6px;}
+  .sysline{position:absolute;left:0;right:0;bottom:14px;text-align:center;
+    font-size:14px;letter-spacing:5px;color:#8b86a3;font-weight:600;}
+  /* bottom buttons */
+  .btm{position:absolute;left:0;right:0;bottom:0;height:270px;background:rgba(255,255,255,.72);
+    display:flex;border-top:1px solid #ece9f5;}
+  .col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+    position:relative;text-align:center;}
+  .col+.col{border-left:1px solid #eceaf3;}
+  .col .th{font-size:26px;font-weight:800;color:#1b1e42;line-height:1.15;position:relative;z-index:2;}
+  .col .en{font-size:15px;letter-spacing:2px;color:#b9b4cf;font-weight:700;margin-top:-2px;}
+  .col .ar{color:#22b7d6;font-size:26px;font-weight:800;}
+  .ico{width:64px;height:64px;}
+  .col.hot{outline:4px solid #e2352f;outline-offset:-10px;border-radius:14px;background:rgba(255,238,238,.55);}
+  .cnum{position:absolute;top:16px;right:22px;width:34px;height:34px;border-radius:50%;
+    background:#FFD400;color:#3a2f00;font-weight:800;font-size:19px;
+    display:flex;align-items:center;justify-content:center;border:2px solid #e5b800;z-index:3;}
 </style></head><body>
-  <div class="bar">
-    <span class="bk">&#8249;</span>
-    <div class="oa-av"><img src="../../assets/logo.png"></div>
-    <div class="oa-t"><b>Vizzel Track Support</b><br><span>ผู้รับผิดชอบเป็นผู้ตอบกลับ</span></div>
-    <span class="oa-ic">&#9906;</span><span class="oa-ic">&#9776;</span>
-  </div>
-  <div class="warn"><span>&#9650;</span>
-    <span>บัญชีนี้ไม่ได้เป็นบัญชีรับรอง โปรดตรวจสอบให้มั่นใจก่อนให้ข้อมูลส่วนบุคคลหรือทำธุรกรรมใดๆ</span>
-    <span class="x">&#10005;</span></div>
-  <div class="datechip">พ. 20 พ.ค.</div>
-  <div class="msg">
-    <div class="av"><img src="../../assets/logo.png"></div>
-    <div class="bub">สวัสดี คุณ B.
-นี่คือบัญชีทางการของ Vizzel Track Support
-ขอบคุณที่เป็นเพื่อนกับเรา🎉
-
-เราจะส่งข่าวสารล่าสุดผ่านบัญชีทางการนี้เป็นระยะ✉️
-เตรียมรับได้เลย!🎁</div>
-    <span class="tm">02:51</span>
-  </div>
-  <div class="rm">
-    <div class="rm-ban">
-      <h3>แตะเพื่อดู <em>ผลิตภัณฑ์</em></h3>
+  <div class="wrap">
+    <div class="top">
+      <div class="logo"><img src="../../assets/logo.png"></div>
+      <div class="plat"><b>◦</b> INTELLIGENT ASSET PLATFORM</div>
+      <h1><span class="l1">แตะเพื่อดู</span><span class="l2">ผลิตภัณฑ์</span></h1>
       <div class="chips"><span class="chip">RFID Tracking</span><span class="chip">Real-time Dashboard</span><span class="chip">Smart Inventory</span></div>
+      <div class="dash">
+        <div class="dbar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+          &nbsp;VIZZEL · Asset Control<span class="live">● LIVE</span></div>
+        <div class="tiles">
+          <div class="tile"><div class="k">ASSETS</div><div class="v">12,480</div></div>
+          <div class="tile hl"><div class="k">ONLINE</div><div class="v">98.6%</div></div>
+          <div class="tile"><div class="k">ALERTS</div><div class="v">03</div></div>
+        </div>
+        <div class="chart">
+          <svg width="100%" height="108" viewBox="0 0 520 108" preserveAspectRatio="none">
+            <defs><linearGradient id="ar" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#37cfe8" stop-opacity=".55"/>
+              <stop offset="1" stop-color="#37cfe8" stop-opacity="0"/></linearGradient></defs>
+            <path d="M0,86 L60,74 L120,80 L180,58 L240,64 L300,42 L360,50 L420,30 L480,40 L520,26 L520,108 L0,108 Z" fill="url(#ar)"/>
+            <polyline points="0,86 60,74 120,80 180,58 240,64 300,42 360,50 420,30 480,40 520,26"
+              fill="none" stroke="#3fd6ec" stroke-width="3"/>
+          </svg>
+        </div>
+      </div>
+      <div class="sysline">VIZZEL · ASSET MANAGEMENT SYSTEM</div>
     </div>
-    <div class="rm-row">
-      <div class="rm-b p1"><div class="rm-ic">💬</div><div class="lb">ติดต่อ<br>เจ้าหน้าที่</div><div class="rm-ar">&#10142;</div></div>
-      <div class="rm-b p2"><div class="rm-ic">📍</div><div class="lb">รายชื่อ<br>ตัวแทนจำหน่าย</div><div class="rm-ar">&#10142;</div></div>
-      <div class="rm-b p3 hot"><div class="cnum">2</div><div class="rm-ic">👥</div><div class="lb">สำหรับคู่ค้า</div><div class="rm-ar">&#10142;</div></div>
+    <div class="btm">
+      <div class="col">
+        <svg class="ico" viewBox="0 0 64 64" fill="none" stroke="#22b7d6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="10" y="14" width="44" height="30" rx="8"/><path d="M22 44 L22 54 L34 44"/>
+          <circle cx="24" cy="29" r="2.2" fill="#22b7d6" stroke="none"/><circle cx="32" cy="29" r="2.2" fill="#22b7d6" stroke="none"/><circle cx="40" cy="29" r="2.2" fill="#22b7d6" stroke="none"/></svg>
+        <div class="th">ติดต่อเจ้า<br>หน้าที่</div><div class="en">TALK TO OUR TEAM</div><div class="ar">&#8595;</div>
+      </div>
+      <div class="col">
+        <svg class="ico" viewBox="0 0 64 64" fill="none" stroke="#8a6ff0" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M32 56 C32 56 50 40 50 26 A18 18 0 1 0 14 26 C14 40 32 56 32 56 Z"/><circle cx="32" cy="26" r="7"/></svg>
+        <div class="th">รายชื่อตัวแทน<br>จำหน่าย</div><div class="en">FIND A DEALER</div><div class="ar">&#8595;</div>
+      </div>
+      <div class="col hot">
+        <div class="cnum">2</div>
+        <svg class="ico" viewBox="0 0 64 64" fill="none" stroke="#3aa8ea" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="24" cy="24" r="8"/><circle cx="42" cy="26" r="7"/>
+          <path d="M12 50 C12 40 20 36 24 36 C28 36 36 40 36 50"/><path d="M38 49 C38 41 44 38 47 38 C51 38 54 41 54 49"/></svg>
+        <div class="th">Dealer</div><div class="en">สำหรับคู่ค้า</div><div class="ar">&#8595;</div>
+      </div>
     </div>
   </div>
-  <div class="inbar"><span class="kb">&#9000;</span>เมนู ▾</div>
 </body></html>"""
 
 
@@ -471,10 +499,9 @@ def capture():
         try:
             ctx = b.new_context(**MOBILE)
             page = ctx.new_page()
-            logo = os.path.join(REPO, "assets", "logo.png")
-            page.set_content(RICHMENU_HTML.replace("../../assets/logo.png", "file://" + logo))
-            page.wait_for_timeout(200)
-            shot(page, "00b-line-richmenu.png", full=True)
+            page.set_content(RICHMENU_HTML.replace("../../assets/logo.png", logo_data_uri()))
+            page.wait_for_timeout(250)
+            shot(page, "00b-line-richmenu.png", clip_selector=".wrap")
             ctx.close()
         except Exception as e:
             print("  ! richmenu:", e)
