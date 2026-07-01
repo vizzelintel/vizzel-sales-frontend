@@ -36,6 +36,49 @@ PDF_OUT = os.path.join(HERE, "Vizzel-Sales-LINE-User-Manual.pdf")
 MOBILE = dict(viewport={"width": 390, "height": 844}, device_scale_factor=2, is_mobile=True)
 
 
+RICHMENU_SRC = os.path.join(HERE, "src", "richmenu-real.png")  # ภาพ Rich Menu จริงจากผู้ใช้
+
+
+def make_richmenu(browser):
+    """ถ้ามีภาพ Rich Menu จริง (src/richmenu-real.png) ใช้ภาพจริง + วาดกรอบแดง/② ที่ปุ่ม Dealer;
+    ไม่งั้น fallback เป็นภาพจำลอง HTML"""
+    out = os.path.join(IMG, "00b-line-richmenu.png")
+    if os.path.exists(RICHMENU_SRC):
+        try:
+            from PIL import Image, ImageDraw, ImageFont
+            im = Image.open(RICHMENU_SRC).convert("RGB")
+            W, H = im.size
+            d = ImageDraw.Draw(im, "RGBA")
+            # กล่องปุ่ม Dealer (คอลัมน์ขวาสุด) — พิกัดสัดส่วนของภาพ
+            x1, y1, x2, y2 = int(W*0.682), int(H*0.531), int(W*0.981), int(H*0.952)
+            d.rounded_rectangle([x1, y1, x2, y2], radius=int(W*0.011),
+                                outline=(226, 53, 47, 255), width=max(6, W//210))
+            r = int(W*0.021); cx, cy = x2 - int(W*0.012), y1 + int(H*0.008)
+            d.ellipse([cx-r, cy-r, cx+r, cy+r], fill=(255, 212, 0, 255), outline=(190, 150, 0, 255), width=4)
+            try:
+                fnt = ImageFont.truetype(os.path.join(HERE, "fonts", "THSarabunNew-Bold.ttf"), int(r*1.4))
+            except Exception:
+                fnt = ImageFont.load_default()
+            tb = d.textbbox((0, 0), "2", font=fnt)
+            d.text((cx-(tb[2]-tb[0])/2-tb[0], cy-(tb[3]-tb[1])/2-tb[1]), "2", font=fnt, fill=(58, 47, 0, 255))
+            im.save(out)
+            print("  ✓ 00b-line-richmenu.png (ภาพจริง + callout ปุ่ม Dealer)")
+            return
+        except Exception as e:
+            print("  ! richmenu (real):", e)
+    # fallback: ภาพจำลอง HTML
+    try:
+        ctx = browser.new_context(**MOBILE)
+        page = ctx.new_page()
+        page.set_content(RICHMENU_HTML.replace("../../assets/logo.png", logo_data_uri()))
+        page.wait_for_timeout(250)
+        page.query_selector(".wrap").screenshot(path=out)
+        ctx.close()
+        print("  ✓ 00b-line-richmenu.png (HTML mock)")
+    except Exception as e:
+        print("  ! richmenu (mock):", e)
+
+
 def logo_data_uri():
     """ฝังโลโก้เป็น data URI (set_content โหลด file:// ไม่ได้เพราะ origin เป็น about:blank)"""
     import base64
@@ -495,16 +538,8 @@ def capture():
         except Exception as e:
             print("  ! upload:", e)
 
-        # ── 00b) Rich Menu mock (หน้าต้อนรับ LINE OA + Rich Menu, เน้นปุ่ม "สำหรับคู่ค้า") ──
-        try:
-            ctx = b.new_context(**MOBILE)
-            page = ctx.new_page()
-            page.set_content(RICHMENU_HTML.replace("../../assets/logo.png", logo_data_uri()))
-            page.wait_for_timeout(250)
-            shot(page, "00b-line-richmenu.png", clip_selector=".wrap")
-            ctx.close()
-        except Exception as e:
-            print("  ! richmenu:", e)
+        # ── 00b) Rich Menu — ใช้ภาพจริงจากผู้ใช้ถ้ามี ไม่งั้น fallback เป็น HTML mock ──
+        make_richmenu(b)
 
         b.close()
 
