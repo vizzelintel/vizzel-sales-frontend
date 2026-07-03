@@ -67,6 +67,7 @@
     .err-banner { background: #F5F3FF; border-radius: 10px; padding: 14px; border: 1px solid var(--vi-border);
                   font-size: 13px; color: var(--vi-purple-dark); line-height: 1.5; text-align: center; }
   </style>
+  <script src="js/config.js"></script>
 </head>
 <body>
 
@@ -102,9 +103,9 @@
 </div>
 
 <script>
-const FRONTEND_BASE_URL = "https://vizzelintel.github.io/vizzel-sales-frontend/";
-const API               = "https://vizzel-sales-api.fly.dev";
-const API_BASE          = API + "/api/v1";
+const FRONTEND_BASE_URL = window.FRONTEND_BASE_URL;
+const API               = window.API;
+const API_BASE          = window.API_BASE;
 const params            = new URLSearchParams(location.search);
 const PROJECT_ID        = params.get("project_id") || "";
 const TOKEN             = params.get("token")      || "";

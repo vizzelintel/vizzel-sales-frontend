@@ -1,21 +1,30 @@
 # Vizzel Sales Frontend
 
-LIFF mini app for Vizzel Sales CRM (production only).
+LIFF mini app for Vizzel Sales CRM (static HTML/JS — no build step).
 
-## Production URLs
+## URLs
 
-- Frontend: `https://vizzelintel.github.io/vizzel-sales-frontend/`
-- Backend API: `https://vizzel-sales-api.fly.dev/api/v1`
+| Environment | Frontend | API |
+|---|---|---|
+| Production | `https://sale.vizzeltrack.com/` | `https://sale-api.vizzeltrack.com` |
+| Staging | `https://staging-sale.vizzeltrack.com/` | `https://staging-sale-api.vizzeltrack.com` |
+| Legacy (transition) | `https://vizzelintel.github.io/vizzel-sales-frontend/` | `https://vizzel-sales-api.fly.dev` |
 
-## Runtime Constants
+## Runtime config
 
-Configured in `index.html` and `upload.html`:
+`js/config.js` picks the environment from hostname (or `localStorage.vizzel_config_env` override):
 
-- `LIFF_ID`
-- `API` / `API_BASE`
-- `FRONTEND_BASE_URL`
+- `config/config.production.js`
+- `config/config.staging.js`
+- `config/config.local.js`
+- `config/config.legacy.js`
 
-Keep these constants aligned with production before deploy. Use the same `API` + `API_BASE` pattern in both HTML files.
+Loaded before inline scripts in `index.html` and `upload.html`.
+
+## Document download
+
+Self-hosted API stores files locally. The app opens documents via authenticated
+`GET /api/v1/documents/:id/download` (JWT Bearer). Legacy Supabase public URLs still open in a new tab.
 
 ## Smoke check before deploy
 
@@ -23,7 +32,15 @@ Keep these constants aligned with production before deploy. Use the same `API` +
 node -e "const fs=require('fs');const s=fs.readFileSync('index.html','utf8').split('<script>').pop().split('</script>')[0];new Function(s);console.log('OK');"
 ```
 
-## User Gate
+## Deploy
+
+- **GitHub Pages (legacy):** push to `main` → `.github/workflows/deploy.yml`
+- **Staging server:** push to `main` → rsync to `/opt/vizzel-sales-frontend-staging/`
+- **Production server:** tag `sale-v*` → rsync to `/opt/vizzel-sales-frontend/`
+
+GitHub secrets: `SALES_DEPLOY_SSH_KEY`, `SALES_DEPLOY_USER`, `SALES_STAGING_HOST`, `SALES_PROD_HOST`
+
+## User gate
 
 - Users must verify email with OTP on first login before using the app.
 - Calendar appointment invite is sent via email (`.ics`) for Google/Outlook compatibility.

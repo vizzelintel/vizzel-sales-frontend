@@ -1,0 +1,39 @@
+name: deploy-prod
+
+on:
+  push:
+    tags:
+      - "sale-v*"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Syntax check
+        run: |
+          node -e "const fs=require('fs');const s=fs.readFileSync('index.html','utf8').split('<script>').pop().split('</script>')[0];new Function(s);console.log('index OK');"
+          node -e "const fs=require('fs');const s=fs.readFileSync('upload.html','utf8').split('<script>').slice(-1)[0].split('</script>')[0];new Function(s);console.log('upload OK');"
+
+      - name: Install SSH key
+        env:
+          DEPLOY_KEY: ${{ secrets.SALES_DEPLOY_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$DEPLOY_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "${{ secrets.SALES_PROD_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Rsync static files to production
+        env:
+          DEPLOY_HOST: ${{ secrets.SALES_PROD_HOST }}
+          DEPLOY_USER: ${{ secrets.SALES_DEPLOY_USER }}
+        run: |
+          rsync -avz --delete \
+            --exclude '.git' \
+            --exclude '.github' \
+            --exclude 'README.md' \
+            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new" \
+            ./ "${DEPLOY_USER}@${DEPLOY_HOST}:/opt/vizzel-sales-frontend/"
