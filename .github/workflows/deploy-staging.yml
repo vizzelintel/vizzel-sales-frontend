@@ -13,9 +13,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Syntax check
-        run: |
-          node -e "const fs=require('fs');const s=fs.readFileSync('index.html','utf8').split('<script>').pop().split('</script>')[0];new Function(s);console.log('index OK');"
-          node -e "const fs=require('fs');const s=fs.readFileSync('upload.html','utf8').split('<script>').slice(-1)[0].split('</script>')[0];new Function(s);console.log('upload OK');"
+        run: node scripts/syntax-check.js
 
       - name: Install SSH key
         env:
