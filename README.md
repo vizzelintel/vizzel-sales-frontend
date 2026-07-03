@@ -29,7 +29,7 @@ Self-hosted API stores files locally. The app opens documents via authenticated
 ## Smoke check before deploy
 
 ```bash
-node -e "const fs=require('fs');const s=fs.readFileSync('index.html','utf8').split('<script>').pop().split('</script>')[0];new Function(s);console.log('OK');"
+node scripts/syntax-check.js
 ```
 
 ## Deploy
