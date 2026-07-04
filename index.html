@@ -6,6 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <title>Vizzel Sales</title>
   <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <script src="js/config.js"></script>
   <style>
     :root {
       --vi-purple: #7B3FF2;
@@ -146,6 +147,7 @@
     .doc-type { font-size: 13px; font-weight: 600; }
     .doc-date { font-size: 11px; color: #8e8e93; margin-top: 2px; }
     .doc-link { color: var(--vi-blue-dark); font-size: 12px; flex-shrink: 0; }
+    .doc-view-btn { background: none; border: none; cursor: pointer; font: inherit; padding: 0; }
 
     /* ── Status buttons ── */
     .sbtn-grid { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; }
@@ -715,13 +717,13 @@
   </div>
 </div>
 
-<script>/* build 20260521j */
-const FRONTEND_BASE_URL = "https://vizzelintel.github.io/vizzel-sales-frontend/";
-const LIFF_ID           = "2010133685-tke1EWht";
-const LIFF_OPEN_URL     = "https://liff.line.me/" + LIFF_ID;
-const APP_BOOT_VERSION  = "20260522j";
-const API               = "https://vizzel-sales-api.fly.dev";
-const API_BASE          = API + "/api/v1";
+<script>/* build 20260703-selfhost — config from js/config.js */
+const FRONTEND_BASE_URL = window.FRONTEND_BASE_URL;
+const LIFF_ID           = window.LIFF_ID;
+const LIFF_OPEN_URL     = window.LIFF_OPEN_URL;
+const APP_BOOT_VERSION  = window.APP_BOOT_VERSION;
+const API               = window.API;
+const API_BASE          = window.API_BASE;
 
 let token    = "";
 let pipelineCounts = {};
@@ -2626,7 +2628,30 @@ function canAddAppointment(projectID, type) {
   return apptCount(projectID, type) < MAX_APPTS_PER_TYPE;
 }
 
+function isPublicDocUrl(url) {
+  return !!url && /^https?:\/\//i.test(url);
+}
+
+async function openDocument(docId) {
+  if (!token) { alert("กรุณาเข้าสู่ระบบใหม่"); return; }
+  try {
+    const res = await fetchWithTimeout(`${API_BASE}/documents/${docId}/download`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error("download failed");
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    window.open(url, "_blank", "noopener");
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  } catch (_) {
+    alert("ไม่สามารถเปิดเอกสารได้");
+  }
+}
+
 function renderDocRow(d, isClosed) {
+  const viewCtrl = isPublicDocUrl(d.file_url)
+    ? `<a class="doc-link" href="${esc(d.file_url)}" target="_blank" rel="noopener">ดู ›</a>`
+    : `<button type="button" class="doc-link doc-view-btn" onclick="openDocument('${esc(d.id)}')">ดู ›</button>`;
   return `<div class="doc-row">
     <div class="doc-icon">${fileIcon(d.file_name)}</div>
     <div class="doc-info">
@@ -2634,7 +2659,7 @@ function renderDocRow(d, isClosed) {
       <div class="doc-date">${esc(d.file_name || '')}${d.file_name && d.created_at ? ' · ' : ''}${fmtDate(d.created_at)}</div>
     </div>
     <div style="display:flex;align-items:center;gap:8px">
-      <a class="doc-link" href="${esc(d.file_url)}" target="_blank">ดู ›</a>
+      ${viewCtrl}
       ${!isClosed ? `<button onclick="deleteDocument('${esc(d.id)}')"
         style="background:none;border:none;color:#FF3B30;font-size:18px;cursor:pointer;padding:0;line-height:1"
         title="ลบเอกสาร">🗑</button>` : ""}
