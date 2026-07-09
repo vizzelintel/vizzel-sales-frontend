@@ -743,7 +743,7 @@ const PROJECTS_PER_PAGE = 10;
 const PIPELINE_RECENT_LIMIT = 10;
 let curTab   = "pipeline";
 let prevTab  = "pipeline";
-let pendingLineId      = "";
+let pendingLineAccessToken = "";
 let pendingDisplayName = "";
 let pendingPictureUrl  = "";
 let detailProjectID = "";
@@ -1066,9 +1066,9 @@ async function initLiff() {
     if (authRes.status === 401) {
       const authData = await authRes.json();
       if (authData.error === "user_not_found") {
-        pendingLineId      = authData.line_id      || "";
-        pendingDisplayName = authData.display_name || "";
-        pendingPictureUrl  = authData.picture_url  || "";
+        pendingLineAccessToken = lineToken;
+        pendingDisplayName     = authData.display_name || "";
+        pendingPictureUrl      = authData.picture_url  || "";
         showRegister();
         return;
       }
@@ -1170,7 +1170,7 @@ async function submitRegister() {
       method:  "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        line_id:      pendingLineId,
+        access_token: pendingLineAccessToken,
         display_name: pendingDisplayName,
         picture_url:  pendingPictureUrl,
         first_name:   firstName,
